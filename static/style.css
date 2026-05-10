@@ -1,1 +1,382 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
 
+/* ====== إعادة تعيين كامل ====== */
+* {
+    font-family: 'Cairo', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0f0f2a 100%);
+    color: white;
+    overflow-x: hidden;
+}
+
+/* ====== الخريطة - داخل المربع المخصص فقط ====== */
+#map {
+    height: 550px;
+    width: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+/* ====== Dark Mode للخريطة ====== */
+.leaflet-tile {
+    filter: grayscale(30%) invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+.leaflet-control-zoom {
+    border: none !important;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-control-zoom a {
+    background: rgba(10, 10, 30, 0.9) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 20px !important;
+    border-radius: 12px !important;
+    margin: 3px !important;
+    transition: all 0.3s ease;
+}
+
+.leaflet-control-zoom a:hover {
+    background: rgba(0, 255, 255, 0.3) !important;
+    border-color: #00ffff !important;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+}
+
+.leaflet-popup-content-wrapper {
+    background: rgba(10, 10, 30, 0.95) !important;
+    color: white !important;
+    border: 1px solid rgba(0, 255, 255, 0.4) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.2) !important;
+}
+
+.leaflet-popup-tip {
+    background: rgba(10, 10, 30, 0.95) !important;
+}
+
+.leaflet-popup-content {
+    margin: 15px 20px !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 14px !important;
+}
+
+/* ====== تأثير الزجاج ====== */
+.glass {
+    background: rgba(10, 10, 30, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+}
+
+.glass-card {
+    background: rgba(10, 10, 30, 0.75);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.glass-card:hover {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+}
+
+.glass-input {
+    background: rgba(255, 255, 255, 0.06) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 14px !important;
+    padding: 14px 18px !important;
+    color: white !important;
+    font-size: 15px !important;
+    outline: none !important;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+    border-color: #00ffff !important;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
+}
+
+.glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ====== أزرار النيون ====== */
+.neon-btn {
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    border: none;
+    border-radius: 14px;
+    padding: 14px 28px;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), 0 0 50px rgba(123, 47, 247, 0.3);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 15px;
+}
+
+.neon-btn:hover {
+    box-shadow: 0 0 35px rgba(0, 255, 255, 0.5), 0 0 70px rgba(123, 47, 247, 0.5);
+    transform: scale(1.03);
+}
+
+.neon-btn:active {
+    transform: scale(0.97);
+}
+
+.neon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.glass-btn {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    padding: 12px 24px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.glass-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #00ffff;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+}
+
+.glass-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ====== تأثير النيون على النص ====== */
+.neon-text {
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.7),
+                 0 0 20px rgba(0, 255, 255, 0.5),
+                 0 0 40px rgba(0, 255, 255, 0.3),
+                 0 0 80px rgba(0, 255, 255, 0.2);
+}
+
+/* ====== أنيميشن ====== */
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-25px) rotate(5deg); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(0, 255, 255, 0.6); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ping {
+    0% { transform: scale(1); opacity: 0.8); }
+    100% { transform: scale(3); opacity: 0); }
+}
+
+@keyframes sosFlash {
+    0%, 100% { background-color: transparent; }
+    25%, 75% { background-color: rgba(255, 0, 0, 0.4); }
+}
+
+@keyframes markerPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+    50% { box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); }
+}
+
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-spin { animation: spin 0.8s linear infinite; }
+.animate-marker-pulse { animation: markerPulse 2s ease-in-out infinite; }
+
+/* ====== شاشة التحميل ====== */
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, #0a0a1a 0%, #000000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loader-spinner {
+    width: 80px;
+    height: 80px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #00ffff;
+    border-right-color: #9333ea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* ====== شريط التقدم ====== */
+.progress-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 280px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ffff, #9333ea);
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+}
+
+/* ====== الإشعارات ====== */
+.notifications-container {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 350px;
+}
+
+.notification {
+    background: rgba(10, 10, 30, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    padding: 14px;
+    animation: slideInRight 0.4s ease-out;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notification.success { border-right: 4px solid #10b981; }
+.notification.error { border-right: 4px solid #ef4444; }
+.notification.warning { border-right: 4px solid #f59e0b; }
+.notification.info { border-right: 4px solid #3b82f6; }
+
+/* ====== القيم الإحصائية ====== */
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #00ffff, #9333ea);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ====== تأثير SOS ====== */
+.sos-flash {
+    animation: sosFlash 0.6s ease 3;
+}
+
+/* ====== تنسيق الماركر ====== */
+.user-marker-icon {
+    background: transparent !important;
+    border: none !important;
+}
+
+.other-user-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 768px) {
+    #map {
+        height: 350px;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+    }
+
+    .glass-card {
+        padding: 12px;
+    }
+
+    .notifications-container {
+        top: 8px;
+        right: 8px;
+        left: 8px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    #map {
+        height: 250px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .glass-card {
+        padding: 10px;
+        border-radius: 12px;
+    }
+}
