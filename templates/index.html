@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a1a">
+    <meta name="description" content="GeoLegend - نظام مشاركة الموقع الجغرافي الأسطوري المباشر">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+
+    <title>GeoLegend | أقوى نظام تتبع مباشر 3D</title>
+
+    <!-- CesiumJS CSS (3D مجاني بالكامل - بدون توكن) -->
+    <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" />
+
+    <!-- Leaflet CSS (احتياطي) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css" />
+
+    <style>
+        :root {
+            --neon-cyan: #00ffff;
+            --neon-purple: #9333ea;
+            --neon-pink: #ff00ff;
+            --bg-dark: #0a0a1a;
+            --glass-bg: rgba(10, 10, 30, 0.75);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            overflow: hidden;
+        }
+
+        /* ====== حاويات الخريطة ====== */
+        #cesiumContainer {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #leafletContainer {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: none;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Cesium tweaks */
+        .cesium-viewer-bottom {
+            display: none !important;
+        }
+
+        .cesium-viewer-toolbar {
+            top: 80px !important;
+            right: 10px !important;
+            left: auto !important;
+        }
+
+        .cesium-viewer-toolbar button {
+            background: rgba(10, 10, 30, 0.85) !important;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            border-radius: 10px !important;
+            backdrop-filter: blur(10px);
+            margin-bottom: 4px !important;
+        }
+
+        .cesium-viewer-toolbar button:hover {
+            background: rgba(0,255,255,0.2) !important;
+        }
+
+        .cesium-button {
+            color: white !important;
+        }
+
+        .cesium-infoBox {
+            background: rgba(10, 10, 30, 0.95) !important;
+            color: white !important;
+            border: 1px solid rgba(0,255,255,0.3) !important;
+            border-radius: 16px !important;
+            backdrop-filter: blur(20px);
+        }
+
+        /* ====== أنيميشن ====== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(0, 255, 255, 0.6); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes sosFlash {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(255, 0, 0, 0.3); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes ping {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+
+        .animate-fadeInUp { animation: fadeInUp 0.6s ease-out; }
+        .animate-fadeInDown { animation: fadeInDown 0.6s ease-out; }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+        .animate-scaleIn { animation: scaleIn 0.5s ease-out; }
+        .animate-slideInLeft { animation: slideInLeft 0.5s ease-out; }
+        .animate-slideInRight { animation: slideInRight 0.5s ease-out; }
+        .animate-pulse { animation: pulse 2s infinite; }
+        .animate-pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+        .animate-spin { animation: spin 0.8s linear infinite; }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+        .delay-500 { animation-delay: 0.5s; }
+        .delay-600 { animation-delay: 0.6s; }
+
+        /* ====== تأثير الزجاج ====== */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 255, 255, 0.4);
+            box-shadow: 0 8px 40px rgba(0, 255, 255, 0.15);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.06) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 14px !important;
+            padding: 12px 16px !important;
+            color: white !important;
+            font-size: 14px !important;
+            outline: none !important;
+            width: 100%;
+            transition: all 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .glass-input:focus {
+            border-color: var(--neon-cyan) !important;
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
+        }
+
+        .glass-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 10px 18px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            font-family: 'Cairo', sans-serif;
+            font-size: 13px;
+        }
+
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+        }
+
+        .glass-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .neon-btn {
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), 0 0 40px rgba(123, 47, 247, 0.3);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            font-family: 'Cairo', sans-serif;
+            font-size: 13px;
+        }
+
+        .neon-btn:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), 0 0 60px rgba(123, 47, 247, 0.5);
+            transform: scale(1.03);
+        }
+
+        .neon-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ====== لوحة المعلومات العلوية ====== */
+        .info-panel {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .info-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .info-card .value {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        /* ====== أزرار التحكم الجانبية ====== */
+        .side-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 12px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .side-btn {
+            width: auto;
+            min-width: 135px;
+            height: 42px;
+            border-radius: 21px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(10, 10, 30, 0.85);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            padding: 0 14px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .side-btn .btn-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .side-btn:hover {
+            background: rgba(0, 200, 255, 0.25);
+            border-color: #00c8ff;
+            box-shadow: 0 0 30px rgba(0, 200, 255, 0.4);
+        }
+
+        .side-btn.tracking-active {
+            background: rgba(0, 255, 136, 0.3);
+            border-color: #00ff88;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
+            animation: pulseGlow 2s infinite;
+        }
+
+        .side-btn.sos-btn {
+            background: rgba(255, 0, 0, 0.35);
+            border-color: #ff4444;
+            animation: pulseGlow 1.5s infinite;
+        }
+
+        /* ====== شريط التنقل السفلي ====== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background: rgba(10, 10, 30, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 12px;
+        }
+
+        .bottom-nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 10px;
+            font-family: 'Cairo', sans-serif;
+            transition: color 0.3s;
+            padding: 4px 12px;
+        }
+
+        .bottom-nav-btn.active {
+            color: var(--neon-cyan);
+        }
+
+        .bottom-nav-btn .nav-icon {
+            font-size: 22px;
+        }
+
+        /* ====== شاشة التحميل ====== */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, #0a0a1a 0%, #000000 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loader-spinner {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--neon-cyan);
+            border-right-color: var(--neon-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            width: 280px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        /* ====== الإشعارات ====== */
+        .notification {
+            background: rgba(20, 20, 40, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            animation: slideInRight 0.4s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 300px;
+            max-width: 380px;
+        }
+
+        .notification.success { border-right: 4px solid #10b981; }
+        .notification.error { border-right: 4px solid #ef4444; }
+        .notification.warning { border-right: 4px solid #f59e0b; }
+        .notification.info { border-right: 4px solid #3b82f6; }
+
+        /* ====== المودال ====== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: rgba(20, 20, 50, 0.95);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 500px;
+            width: 95%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: scaleIn 0.4s ease-out;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .modal-close-btn:hover { color: white; }
+
+        /* ====== تأثير SOS ====== */
+        .sos-flash { animation: sosFlash 0.5s ease 3; }
+
+        /* ====== Responsive ====== */
+        @media (max-width: 768px) {
+            .info-panel { top: 8px; gap: 5px; }
+            .info-card { padding: 6px 10px; font-size: 10px; gap: 5px; }
+            .info-card .value { font-size: 12px; }
+            .side-controls { bottom: 80px; right: 8px; gap: 6px; }
+            .side-btn { min-width: 115px; height: 38px; font-size: 11px; padding: 0 10px; }
+            .side-btn .btn-icon { font-size: 16px; width: 20px; }
+            .modal-content { padding: 20px; }
+            .notification { min-width: auto; max-width: 90vw; }
+            .loader-spinner { width: 60px; height: 60px; }
+        }
+
+        @media (max-width: 480px) {
+            .info-panel { flex-wrap: wrap; justify-content: center; }
+            .side-btn { min-width: 100px; height: 34px; font-size: 10px; }
+            .side-btn .btn-icon { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== شاشة التحميل ==================== -->
+    <div class="loading-screen" id="loadingScreen">
+        <div style="text-align: center; position: relative;">
+            <div class="loader-spinner" style="margin: 0 auto 30px;"></div>
+            <div style="width: 20px; height: 20px; background: var(--neon-cyan); border-radius: 50%; position: absolute; top: 30px; left: 50%; margin-left: -10px; animation: pulse 1.5s ease-in-out infinite;"></div>
+            <h2 style="font-size: 2rem; font-weight: 900; margin-bottom: 8px;">
+                <span style="background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">GeoLegend</span>
+            </h2>
+            <p style="color: rgba(255,255,255,0.6); margin-bottom: 20px;">جارٍ تجهيز النظام الأسطوري...</p>
+            <div class="progress-bar" style="margin: 0 auto;">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <p style="color: rgba(255,255,255,0.4); margin-top: 10px; font-size: 13px;" id="loadingPercentage">0%</p>
+        </div>
+    </div>
+
+    <!-- ==================== حاويات الخريطة ==================== -->
+    <div id="cesiumContainer"></div>
+    <div id="leafletContainer"><div id="map"></div></div>
+
+    <!-- ==================== لوحة المعلومات العلوية ==================== -->
+    <div class="info-panel" id="infoPanel">
+        <div class="info-card">
+            <span style="font-size: 16px;">🏎️</span>
+            <div>
+                <span style="color: rgba(255,255,255,0.5); font-size: 9px; display: block;">السرعة</span>
+                <span class="value" id="speedDisplay" style="color: var(--neon-cyan);">0.0</span>
+                <span style="font-size: 9px; color: rgba(255,255,255,0.5);">كم/س</span>
+            </div>
+        </div>
+        <div class="info-card">
+            <span style="font-size: 16px;">🧭</span>
+            <div>
+                <span style="color: rgba(255,255,255,0.5); font-size: 9px; display: block;">الاتجاه</span>
+                <span class="value" id="headingDisplay" style="color: var(--neon-purple);">0</span>
+                <span style="font-size: 9px; color: rgba(255,255,255,0.5);">°</span>
+            </div>
+        </div>
+        <div class="info-card">
+            <span style="font-size: 16px;">🎯</span>
+            <div>
+                <span style="color: rgba(255,255,255,0.5); font-size: 9px; display: block;">الدقة</span>
+                <span class="value" id="accuracyDisplay" style="color: #00ff88;">--</span>
+                <span style="font-size: 9px; color: rgba(255,255,255,0.5);">م</span>
+            </div>
+        </div>
+        <div class="info-card">
+            <span id="statusDot" style="color: #666; font-size: 10px;">●</span>
+            <div>
+                <span style="color: rgba(255,255,255,0.5); font-size: 9px; display: block;">الحالة</span>
+                <span class="value" id="trackingStatus" style="color: #666;">متوقف</span>
+            </div>
+        </div>
+        <div class="info-card">
+            <span id="connectionDot" style="color: #00ff88; font-size: 10px;">●</span>
+            <div>
+                <span style="color: rgba(255,255,255,0.5); font-size: 9px; display: block;">اتصال</span>
+                <span class="value" id="connectionStatus" style="color: #00ff88; font-size: 12px;">متصل</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== أزرار التحكم الجانبية ==================== -->
+    <div class="side-controls">
+        <button class="side-btn" onclick="centerMapOnUser()" title="📍 تحديد موقعي">
+            <span class="btn-icon">📍</span> موقعي
+        </button>
+        <button id="trackingBtnSide" class="side-btn" onclick="toggleTracking()" title="▶️ بدء / إيقاف التتبع">
+            <span id="trackingIconSide" class="btn-icon">▶️</span>
+            <span id="trackingTextSide">بدء التتبع</span>
+        </button>
+        <button class="side-btn" onclick="toggleMapLayer()" title="🗺️ تغيير الطبقة">
+            <span class="btn-icon">🗺️</span> الطبقة
+        </button>
+        <button class="side-btn" onclick="toggle3DView()" title="🏙️ 3D">
+            <span class="btn-icon">🏙️</span> 3D
+        </button>
+        <button class="side-btn sos-btn" onclick="sendSOS()" title="🚨 طوارئ">
+            <span class="btn-icon">🚨</span> SOS
+        </button>
+    </div>
+
+    <!-- ==================== شريط التنقل السفلي ==================== -->
+    <div class="bottom-nav">
+        <button class="bottom-nav-btn active" onclick="openTab('map')">
+            <span class="nav-icon">🗺️</span> الخريطة
+        </button>
+        <button class="bottom-nav-btn" onclick="openTab('family')">
+            <span class="nav-icon">👨‍👩‍👧‍👦</span> العائلة
+        </button>
+        <button class="bottom-nav-btn" onclick="openTab('friends')">
+            <span class="nav-icon">👥</span> أصدقاء
+        </button>
+        <button class="bottom-nav-btn" onclick="openTab('trips')">
+            <span class="nav-icon">🚗</span> رحلات
+        </button>
+        <button class="bottom-nav-btn" onclick="openTab('menu')">
+            <span class="nav-icon">☰</span> القائمة
+        </button>
+    </div>
+
+    <!-- ==================== مودال تسجيل الدخول ==================== -->
+    <div id="loginModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('loginModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.4rem; font-weight: 700;">🚪 تسجيل الدخول</h2>
+                <button class="modal-close-btn" onclick="closeModal('loginModal')">✕</button>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; margin-bottom: 6px; font-size: 12px; color: rgba(255,255,255,0.6);">📧 البريد الإلكتروني</label>
+                <input type="email" id="loginEmail" class="glass-input" placeholder="example@email.com" dir="ltr" autocomplete="email">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 6px; font-size: 12px; color: rgba(255,255,255,0.6);">🔒 كلمة المرور</label>
+                <input type="password" id="loginPassword" class="glass-input" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <button class="neon-btn" style="width: 100%; margin-bottom: 12px; padding: 12px;" onclick="login()">
+                <span>🚪</span> دخول
+            </button>
+            <p style="text-align: center; font-size: 12px; color: rgba(255,255,255,0.5);">
+                ليس لديك حساب؟
+                <button onclick="closeModal('loginModal'); showModal('registerModal')" style="background: none; border: none; color: var(--neon-cyan); cursor: pointer; font-weight: 600;">سجل الآن</button>
+            </p>
+        </div>
+    </div>
+
+    <!-- ==================== مودال التسجيل ==================== -->
+    <div id="registerModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('registerModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.4rem; font-weight: 700;">✨ إنشاء حساب جديد</h2>
+                <button class="modal-close-btn" onclick="closeModal('registerModal')">✕</button>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">👤 الاسم</label>
+                <input type="text" id="regName" class="glass-input" placeholder="محمد أحمد">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">📧 البريد</label>
+                <input type="email" id="regEmail" class="glass-input" placeholder="example@email.com" dir="ltr">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">🔒 كلمة المرور</label>
+                <input type="password" id="regPassword" class="glass-input" placeholder="6 أحرف على الأقل">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">✅ تأكيد</label>
+                <input type="password" id="regConfirmPassword" class="glass-input" placeholder="أعد كتابة كلمة المرور">
+            </div>
+            <button class="neon-btn" style="width: 100%; padding: 12px;" onclick="register()">
+                <span>✨</span> إنشاء الحساب
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== مودال العائلة ==================== -->
+    <div id="familyModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('familyModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 1.3rem; font-weight: 700;">👨‍👩‍👧‍👦 العائلة</h2>
+                <button class="modal-close-btn" onclick="closeModal('familyModal')">✕</button>
+            </div>
+            <div id="familyContent">
+                <p style="color: rgba(255,255,255,0.5); font-size: 13px;">جارٍ التحميل...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== مودال الأصدقاء ==================== -->
+    <div id="friendsModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('friendsModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 1.3rem; font-weight: 700;">👥 الأصدقاء</h2>
+                <button class="modal-close-btn" onclick="closeModal('friendsModal')">✕</button>
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                <input type="email" id="friendEmail" class="glass-input" placeholder="📧 بريد الصديق" dir="ltr" style="font-size: 13px;">
+                <button class="neon-btn" onclick="sendFriendRequest()" style="padding: 8px 14px; font-size: 12px; white-space: nowrap;">📨 إرسال</button>
+            </div>
+            <div id="friendsContent">
+                <p style="color: rgba(255,255,255,0.5); font-size: 13px;">جارٍ التحميل...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== مودال الرحلات ==================== -->
+    <div id="tripsModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('tripsModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 1.3rem; font-weight: 700;">🚗 الرحلات</h2>
+                <button class="modal-close-btn" onclick="closeModal('tripsModal')">✕</button>
+            </div>
+            <div id="tripsContent">
+                <button class="neon-btn" style="width: 100%; margin-bottom: 12px;" onclick="startTrip()">▶️ بدء رحلة جديدة</button>
+                <button class="glass-btn" style="width: 100%; margin-bottom: 12px;" onclick="endTrip()">⏹️ إنهاء الرحلة</button>
+                <div id="tripsList" style="max-height: 250px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== مودال القائمة ==================== -->
+    <div id="menuModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('menuModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 1.3rem; font-weight: 700;">☰ القائمة</h2>
+                <button class="modal-close-btn" onclick="closeModal('menuModal')">✕</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="closeModal('menuModal'); showModal('loginModal')">🚪 تسجيل الدخول</button>
+                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="closeModal('menuModal'); showModal('registerModal')">✨ إنشاء حساب</button>
+                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="shareLocation()">🔗 مشاركة موقعي</button>
+                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="navigateTo()">🧭 تحديد مسار</button>
+                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="logout()">👋 تسجيل الخروج</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== حاوية الإشعارات ==================== -->
+    <div id="notifications" style="position: fixed; top: 20px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; max-width: 380px;"></div>
+
+    <!-- ==================== السكريبتات ==================== -->
+    <!-- CesiumJS -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- SocketIO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+
+    <script>
+        // ==================== المتغيرات العامة ====================
+        var cesiumViewer = null;
+        var userEntity = null;
+        var userPathEntity = null;
+        var familyEntities = {};
+        var friendEntities = {};
+        var leafletMap = null;
+        var userMarker = null;
+        var userPathLine = null;
+        var pathPositions = [];
+        var watchId = null;
+        var isTracking = false;
+        var currentPosition = null;
+        var currentUserId = null;
+        var currentMapLayer = 0;
+        var use3D = true;
+        var socket = null;
+        var API_BASE = '/api';
+        var autoFollowUser = true;
+        var isOnline = navigator.onLine;
+        var offlineQueue = [];
+        var lastSentPosition = null;
+        var batterySaverMode = false;
+        var lastBatteryCheck = 0;
+        var navigationActive = false;
+        var navigationTarget = null;
+
+        // ====== Cooldown System ======
+        var cooldowns = {
+            lastSOS: 0, lastShare: 0, lastLogin: 0, lastRegister: 0,
+            lastTrackingToggle: 0, lastMapLayer: 0, lastCopy: 0, lastCenter: 0
+        };
+
+        var COOLDOWN_TIMES = {
+            sos: 30000, share: 10000, login: 5000, register: 5000,
+            tracking: 3000, mapLayer: 2000, copy: 3000, center: 2000
+        };
+
+        function isOnCooldown(action) {
+            var now = Date.now();
+            var key = 'last' + action.charAt(0).toUpperCase() + action.slice(1);
+            var lastTime = cooldowns[key] || 0;
+            var cooldownTime = COOLDOWN_TIMES[action] || 3000;
+            if (now - lastTime < cooldownTime) {
+                var remaining = Math.ceil((cooldownTime - (now - lastTime)) / 1000);
+                showNotification('⏳ انتظر', 'يمكنك المحاولة بعد ' + remaining + ' ثانية', 'warning');
+                return true;
+            }
+            cooldowns[key] = now;
+            return false;
+        }
+
+        // ====== طبقات الخريطة ======
+        var mapLayers = [
+            { name: '🌙 Dark', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' },
+            { name: '🛰️ Satellite', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
+            { name: '🌍 Streets', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' },
+            { name: '🏙️ Light', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' }
+        ];
+
+        // ==================== شاشة التحميل ====================
+        window.addEventListener('load', function() {
+            var progressFill = document.getElementById('progressFill');
+            var loadingPercentage = document.getElementById('loadingPercentage');
+            if (!progressFill) return;
+
+            var width = 0;
+            var interval = setInterval(function() {
+                width += Math.random() * 25;
+                if (width >= 100) {
+                    width = 100;
+                    clearInterval(interval);
+                    if (loadingPercentage) loadingPercentage.textContent = '100%';
+                    if (progressFill) progressFill.style.width = '100%';
+                    setTimeout(function() {
+                        var loadingScreen = document.getElementById('loadingScreen');
+                        if (loadingScreen) loadingScreen.classList.add('hidden');
+                    }, 500);
+                } else {
+                    if (progressFill) progressFill.style.width = width + '%';
+                    if (loadingPercentage) loadingPercentage.textContent = Math.round(width) + '%';
+                }
+            }, 200);
+
+            initCesiumMap();
+            initSocketIO();
+            restoreUserState();
+            setupConnectionListeners();
+            setupIdleDetection();
+
+            console.log('🌟 GeoLegend 3D - All Systems Ready');
+            console.log('🏙️ Cesium 3D | 🧭 Navigation | 👨‍👩‍👧‍👦 Family | 🚨 SOS | 🤖 AI');
+        });
+
+        // ==================== تهيئة Cesium 3D ====================
+        function initCesiumMap() {
+            try {
+                // توجيه Cesium لاستخدام assets من المسار الصحيح
+                Cesium.Ion.defaultAccessToken = ''; // لا نحتاج توكن
+                Cesium.buildModuleUrl.setBaseUrl('https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/');
+
+                cesiumViewer = new Cesium.Viewer('cesiumContainer', {
+                    animation: false,
+                    baseLayerPicker: false,
+                    fullscreenButton: false,
+                    geocoder: false,
+                    homeButton: true,
+                    infoBox: true,
+                    sceneModePicker: true,
+                    selectionIndicator: true,
+                    timeline: false,
+                    navigationHelpButton: false,
+                    scene3DOnly: false,
+                    shouldAnimate: true,
+                    terrainProvider: Cesium.createWorldTerrain(),
+                    imageryProvider: new Cesium.UrlTemplateImageryProvider({
+                        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                        subdomains: ['a', 'b', 'c', 'd'],
+                        maximumLevel: 19
+                    })
+                });
+
+                // إزالة الشعارات الزائدة
+                cesiumViewer._cesiumWidget._creditContainer.style.display = 'none';
+
+                // توجيه الكاميرا إلى الرياض
+                cesiumViewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(46.6753, 24.7136, 5000),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-45),
+                        roll: 0
+                    }
+                });
+
+                // إضافة كيان المستخدم
+                userEntity = cesiumViewer.entities.add({
+                    id: 'user',
+                    position: Cesium.Cartesian3.fromDegrees(46.6753, 24.7136, 100),
+                    billboard: {
+                        image: createUserMarkerImage(),
+                        scale: 0.7,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+                    },
+                    label: {
+                        text: '📍 أنت هنا',
+                        font: '14px Cairo',
+                        fillColor: Cesium.Color.CYAN,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        verticalOrigin: Cesium.VerticalOrigin.TOP,
+                        pixelOffset: new Cesium.Cartesian2(0, 30)
+                    }
+                });
+
+                // إضافة خط المسار
+                userPathEntity = cesiumViewer.entities.add({
+                    id: 'userPath',
+                    polyline: {
+                        positions: new Cesium.CallbackProperty(function() {
+                            return Cesium.Cartesian3.fromDegreesArray(pathPositions.flat());
+                        }, false),
+                        width: 4,
+                        material: Cesium.Color.CYAN.withAlpha(0.8),
+                        clampToGround: true
+                    }
+                });
+
+                console.log('✅ Cesium 3D Map Ready');
+                use3D = true;
+
+            } catch (error) {
+                console.warn('⚠️ Cesium failed, falling back to Leaflet:', error);
+                use3D = false;
+                document.getElementById('cesiumContainer').style.display = 'none';
+                document.getElementById('leafletContainer').style.display = 'block';
+                initLeafletMap();
+            }
+        }
+
+        function createUserMarkerImage() {
+            var canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            var ctx = canvas.getContext('2d');
+
+            // دائرة خارجية متوهجة
+            ctx.beginPath();
+            ctx.arc(32, 32, 30, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.fill();
+
+            // دائرة داخلية
+            ctx.beginPath();
+            ctx.arc(32, 32, 12, 0, 2 * Math.PI);
+            ctx.fillStyle = '#00ffff';
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // نقطة المركز
+            ctx.beginPath();
+            ctx.arc(32, 32, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+
+            return canvas.toDataURL();
+        }
+
+        function initLeafletMap() {
+            var mapEl = document.getElementById('map');
+            leafletMap = L.map('map', {
+                center: [24.7136, 46.6753],
+                zoom: 15,
+                zoomControl: false,
+                attributionControl: false
+            });
+
+            L.tileLayer(mapLayers[currentMapLayer].url, { maxZoom: 19 }).addTo(leafletMap);
+            L.control.zoom({ position: 'bottomleft' }).addTo(leafletMap);
+
+            var icon = L.divIcon({
+                html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#00ffff,#9333ea);border-radius:50%;border:3px solid white;box-shadow:0 0 30px rgba(0,255,255,0.8);animation:pulse 2s infinite;"></div>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+
+            userMarker = L.marker([24.7136, 46.6753], { icon: icon, zIndexOffset: 1000 }).addTo(leafletMap);
+            userPathLine = L.polyline([], { color: '#00ffff', weight: 4, opacity: 0.7, smoothFactor: 1 }).addTo(leafletMap);
+
+            userMarker.bindPopup('<b>📍 أنت هنا</b><br><small>لم يبدأ التتبع بعد</small>');
+
+            leafletMap.on('movestart', function(e) {
+                if (e.originalEvent) autoFollowUser = false;
+            });
+
+            console.log('✅ Leaflet Map Ready');
+        }
+
+        // ==================== تهيئة SocketIO ====================
+        function initSocketIO() {
+            try {
+                socket = io.connect(window.location.origin, {
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: 10,
+                    reconnectionDelay: 1000
+                });
+
+                socket.on('connect', function() { console.log('🔗 SocketIO متصل'); });
+                socket.on('location_update', function(data) {
+                    if (data.user_id === currentUserId) return;
+                    updateOtherUserMarker(data);
+                });
+                socket.on('family_location_update', function(data) {
+                    updateOtherUserMarker(data);
+                });
+                socket.on('sos_alert', function(data) {
+                    showNotification('🚨 SOS!', 'إشارة طوارئ من مستخدم ' + data.user_id, 'error');
+                    if (cesiumViewer && use3D) {
+                        cesiumViewer.entities.add({
+                            position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 200),
+                            billboard: {
+                                image: createSOSMarkerImage(),
+                                scale: 0.5,
+                                verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+                            },
+                            label: {
+                                text: '🚨 SOS!\n' + (data.message || ''),
+                                font: '12px Cairo',
+                                fillColor: Cesium.Color.RED,
+                                outlineColor: Cesium.Color.BLACK,
+                                outlineWidth: 2,
+                                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                                verticalOrigin: Cesium.VerticalOrigin.TOP,
+                                pixelOffset: new Cesium.Cartesian2(0, 20)
+                            }
+                        });
+                    }
+                });
+                socket.on('new_notification', function(data) {
+                    showNotification(data.title, data.message, data.type);
+                });
+            } catch (error) {
+                console.warn('⚠️ SocketIO غير متاح');
+            }
+        }
+
+        function createSOSMarkerImage() {
+            var canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            var ctx = canvas.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(32, 32, 30, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(32, 32, 15, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ff0000';
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('SOS', 32, 32);
+            return canvas.toDataURL();
+        }
+
+        function updateOtherUserMarker(data) {
+            if (!cesiumViewer || !use3D) return;
+            var key = 'user_' + data.user_id;
+            if (familyEntities[key]) {
+                familyEntities[key].position = Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50);
+            } else {
+                familyEntities[key] = cesiumViewer.entities.add({
+                    id: key,
+                    position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50),
+                    billboard: {
+                        image: createOtherUserMarkerImage(data.name || 'U'),
+                        scale: 0.5,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+                    },
+                    label: {
+                        text: data.name || 'مستخدم',
+                        font: '12px Cairo',
+                        fillColor: Cesium.Color.WHITE,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        verticalOrigin: Cesium.VerticalOrigin.TOP,
+                        pixelOffset: new Cesium.Cartesian2(0, 15)
+                    }
+                });
+            }
+        }
+
+        function createOtherUserMarkerImage(initial) {
+            var canvas = document.createElement('canvas');
+            canvas.width = 48;
+            canvas.height = 48;
+            var ctx = canvas.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(24, 24, 22, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ff6600';
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(initial.charAt(0).toUpperCase(), 24, 24);
+            return canvas.toDataURL();
+        }
+
+        // ==================== كشف الخمول ====================
+        function setupIdleDetection() {
+            var idleTimeout = null;
+            function resetIdle() {
+                if (batterySaverMode) {
+                    batterySaverMode = false;
+                    if (isTracking) startTracking();
+                }
+                clearTimeout(idleTimeout);
+                idleTimeout = setTimeout(function() {
+                    batterySaverMode = true;
+                    if (isTracking && currentPosition && currentPosition.speed < 2) {
+                        stopTracking();
+                        showNotification('🔋 توفير بطارية', 'تم تقليل التحديثات', 'info');
+                    }
+                }, 60000);
+            }
+            ['mousemove', 'keydown', 'touchstart', 'scroll'].forEach(function(evt) {
+                document.addEventListener(evt, resetIdle);
+            });
+        }
+
+        // ==================== كشف الاتصال ====================
+        function setupConnectionListeners() {
+            window.addEventListener('online', function() {
+                isOnline = true;
+                updateConnectionUI(true);
+                showNotification('✅ متصل', 'تم استعادة الاتصال', 'success');
+                flushOfflineQueue();
+            });
+            window.addEventListener('offline', function() {
+                isOnline = false;
+                updateConnectionUI(false);
+                showNotification('⚠️ غير متصل', 'سيتم حفظ المواقع محلياً', 'warning');
+            });
+        }
+
+        function updateConnectionUI(online) {
+            var dot = document.getElementById('connectionDot');
+            var status = document.getElementById('connectionStatus');
+            if (online) {
+                if (dot) { dot.style.color = '#00ff88'; dot.textContent = '●'; }
+                if (status) { status.textContent = 'متصل'; status.style.color = '#00ff88'; }
+            } else {
+                if (dot) { dot.style.color = '#ff4444'; dot.textContent = '●'; }
+                if (status) { status.textContent = 'غير متصل (' + offlineQueue.length + ')'; status.style.color = '#ff4444'; }
+            }
+        }
+
+        function flushOfflineQueue() {
+            while (offlineQueue.length > 0) {
+                var data = offlineQueue.shift();
+                sendSingleLocation(data, getToken());
+            }
+        }
+
+        // ==================== تتبع الموقع ====================
+        function startTracking() {
+            if (isOnCooldown('tracking')) return;
+            if (!navigator.geolocation) { showNotification('❌', 'GPS غير مدعوم', 'error'); return; }
+            var options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+            watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
+            isTracking = true;
+            autoFollowUser = true;
+            updateTrackingUI(true);
+            showNotification('✅', 'بدأ التتبع المباشر', 'success');
+        }
+
+        function stopTracking() {
+            if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+            isTracking = false;
+            updateTrackingUI(false);
+        }
+
+        function toggleTracking() {
+            if (isOnCooldown('tracking')) return;
+            isTracking ? stopTracking() : startTracking();
+        }
+
+        function updateTrackingUI(tracking) {
+            var btn = document.getElementById('trackingBtnSide');
+            var icon = document.getElementById('trackingIconSide');
+            var text = document.getElementById('trackingTextSide');
+            var dot = document.getElementById('statusDot');
+            var status = document.getElementById('trackingStatus');
+            if (tracking) {
+                if (btn) btn.classList.add('tracking-active');
+                if (icon) icon.textContent = '⏹️';
+                if (text) text.textContent = 'إيقاف التتبع';
+                if (dot) { dot.style.color = '#00ff88'; }
+                if (status) { status.textContent = 'مباشر'; status.style.color = '#00ff88'; }
+            } else {
+                if (btn) btn.classList.remove('tracking-active');
+                if (icon) icon.textContent = '▶️';
+                if (text) text.textContent = 'بدء التتبع';
+                if (dot) { dot.style.color = '#666'; }
+                if (status) { status.textContent = 'متوقف'; status.style.color = '#666'; }
+            }
+        }
+
+        function updatePosition(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            var speed = position.coords.speed ? (position.coords.speed * 3.6) : 0;
+            var heading = position.coords.heading || 0;
+            var accuracy = position.coords.accuracy || 0;
+
+            currentPosition = { lat: lat, lng: lng, speed: speed.toFixed(1), heading: Math.round(heading), accuracy: Math.round(accuracy) };
+
+            // تحديث Cesium 3D
+            if (cesiumViewer && use3D && userEntity) {
+                userEntity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
+                pathPositions.push(lng, lat);
+                if (pathPositions.length > 400) pathPositions = pathPositions.slice(-300);
+
+                if (isTracking && autoFollowUser) {
+                    cesiumViewer.camera.flyTo({
+                        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
+                        orientation: {
+                            heading: Cesium.Math.toRadians(heading),
+                            pitch: Cesium.Math.toRadians(-45),
+                            roll: 0
+                        },
+                        duration: 0.5
+                    });
+                }
+            }
+
+            // تحديث Leaflet
+            if (leafletMap && userMarker) {
+                userMarker.setLatLng([lat, lng]);
+                if (isTracking && autoFollowUser) leafletMap.panTo([lat, lng], { animate: true, duration: 0.5 });
+                if (userPathLine) {
+                    var coords = [lat, lng];
+                    // Leaflet path
+                }
+            }
+
+            updateDisplayInfo(lat, lng, speed, heading, accuracy);
+
+            var shouldSend = !lastSentPosition ||
+                haversineDistance(lastSentPosition.lat, lastSentPosition.lng, lat, lng) > 0.005;
+
+            if (shouldSend) {
+                sendLocationToServer(lat, lng, speed, heading, accuracy);
+                lastSentPosition = { lat: lat, lng: lng };
+            }
+
+            if (Date.now() - lastBatteryCheck > 15000) {
+                lastBatteryCheck = Date.now();
+                if (speed < 2 && watchId && isTracking) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError,
+                        { enableHighAccuracy: false, timeout: 30000, maximumAge: 10000 });
+                }
+            }
+
+            // تحديث الملاحة
+            if (navigationActive && navigationTarget) {
+                updateNavigation(lat, lng);
+            }
+        }
+
+        function handleGeolocationError(error) {
+            var msg = '';
+            switch(error.code) {
+                case error.PERMISSION_DENIED: msg = 'تم رفض إذن GPS'; break;
+                case error.POSITION_UNAVAILABLE: msg = 'الموقع غير متوفر'; break;
+                case error.TIMEOUT: msg = 'انتهت مهلة GPS'; break;
+                default: msg = 'خطأ غير معروف'; break;
+            }
+            showNotification('⚠️ GPS', msg, 'warning');
+        }
+
+        function haversineDistance(lat1, lng1, lat2, lng2) {
+            var R = 6371;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLng = (lng2 - lng1) * Math.PI / 180;
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function updateDisplayInfo(lat, lng, speed, heading, accuracy) {
+            var sp = document.getElementById('speedDisplay');
+            var hd = document.getElementById('headingDisplay');
+            var ac = document.getElementById('accuracyDisplay');
+            if (sp) sp.textContent = parseFloat(speed).toFixed(1);
+            if (hd) hd.textContent = Math.round(heading);
+            if (ac) ac.textContent = accuracy ? Math.round(accuracy) : '--';
+        }
+
+        function getToken() {
+            return sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        }
+
+        function sendLocationToServer(lat, lng, speed, heading, accuracy) {
+            var token = getToken();
+            if (!token) return;
+            var data = { lat: lat, lng: lng, speed: parseFloat(speed) || 0, heading: parseInt(heading) || 0, accuracy: accuracy };
+            if (!isOnline) { if (offlineQueue.length < 200) offlineQueue.push(data); updateConnectionUI(false); return; }
+            sendSingleLocation(data, token);
+        }
+
+        function sendSingleLocation(data, token) {
+            fetch(API_BASE + '/location/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(data)
+            }).then(function(r) { if (r.status === 401) return refreshToken().then(function() { sendSingleLocation(data, getToken()); }); })
+            .catch(function() {});
+        }
+
+        function centerMapOnUser() {
+            if (isOnCooldown('center')) return;
+            if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); return; }
+            autoFollowUser = true;
+            if (cesiumViewer && use3D) {
+                cesiumViewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(currentPosition.lng, currentPosition.lat, 500),
+                    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-45), roll: 0 },
+                    duration: 1
+                });
+            }
+            if (leafletMap) leafletMap.flyTo([currentPosition.lat, currentPosition.lng], 18, { animate: true, duration: 1 });
+        }
+
+        // ==================== تبديل الطبقات ====================
+        function toggleMapLayer() {
+            if (isOnCooldown('mapLayer')) return;
+            currentMapLayer = (currentMapLayer + 1) % mapLayers.length;
+            if (cesiumViewer && use3D) {
+                cesiumViewer.imageryLayers.removeAll();
+                cesiumViewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+                    url: mapLayers[currentMapLayer].url,
+                    subdomains: ['a', 'b', 'c', 'd'],
+                    maximumLevel: 19
+                }));
+            }
+            if (leafletMap) {
+                leafletMap.eachLayer(function(l) { if (l instanceof L.TileLayer) leafletMap.removeLayer(l); });
+                L.tileLayer(mapLayers[currentMapLayer].url, { maxZoom: 19 }).addTo(leafletMap);
+            }
+            showNotification('🗺️', mapLayers[currentMapLayer].name, 'info');
+        }
+
+        function toggle3DView() {
+            if (!cesiumViewer || !use3D) return;
+            var scene = cesiumViewer.scene;
+            if (scene.mode === Cesium.SceneMode.SCENE3D) {
+                scene.morphTo2D(1);
+                showNotification('🗺️', 'تم التبديل للعرض ثنائي الأبعاد', 'info');
+            } else {
+                scene.morphTo3D(1);
+                showNotification('🏙️', 'تم التبديل للعرض ثلاثي الأبعاد', 'info');
+            }
+        }
+
+        // ==================== الملاحة ====================
+        function navigateTo() {
+            if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); return; }
+            var targetLat = prompt('أدخل خط العرض للوجهة:');
+            var targetLng = prompt('أدخل خط الطول للوجهة:');
+            if (!targetLat || !targetLng) return;
+
+            navigationTarget = { lat: parseFloat(targetLat), lng: parseFloat(targetLng) };
+            navigationActive = true;
+
+            fetch(API_BASE + '/navigation/route', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ start_lat: currentPosition.lat, start_lng: currentPosition.lng,
+                                       end_lat: navigationTarget.lat, end_lng: navigationTarget.lng })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success') {
+                    showNotification('🧭', 'المسافة: ' + d.distance_km + ' كم | الوقت: ' + d.duration_minutes + ' دقيقة', 'info');
+                }
+            }).catch(function() { showNotification('❌', 'فشل حساب المسار', 'error'); });
+        }
+
+        function updateNavigation(lat, lng) {
+            if (!navigationTarget) return;
+            var dist = haversineDistance(lat, lng, navigationTarget.lat, navigationTarget.lng);
+            if (dist < 0.05) {
+                navigationActive = false;
+                navigationTarget = null;
+                showNotification('✅', 'وصلت إلى وجهتك!', 'success');
+            }
+        }
+
+        // ==================== مشاركة ====================
+        function shareLocation() {
+            if (isOnCooldown('share')) return;
+            var token = getToken();
+            if (!token) { showNotification('⚠️', 'سجل دخول أولاً', 'warning'); showModal('loginModal'); return; }
+            if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); startTracking(); return; }
+
+            fetch(API_BASE + '/share/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ minutes: 30 })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success') {
+                    var url = d.full_url || (window.location.origin + '/share/' + d.room_id);
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(url).then(function() {
+                            showNotification('✅', 'تم نسخ الرابط', 'success');
+                        });
+                    } else {
+                        prompt('انسخ الرابط:', url);
+                    }
+                }
+            });
+        }
+
+        // ==================== SOS ====================
+        function sendSOS() {
+            if (isOnCooldown('sos')) return;
+            if (!currentPosition) { showNotification('❌', 'لا موقع', 'error'); return; }
+            var token = getToken();
+            if (!token) { showNotification('⚠️', 'سجل دخول', 'warning'); return; }
+
+            fetch(API_BASE + '/sos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ lat: currentPosition.lat, lng: currentPosition.lng, message: '🚨 طلب مساعدة عاجل!' })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success') {
+                    document.body.classList.add('sos-flash');
+                    setTimeout(function() { document.body.classList.remove('sos-flash'); }, 1500);
+                    showNotification('🚨 SOS!', 'تم الإرسال', 'error');
+                }
+            });
+        }
+
+        // ==================== الرحلات ====================
+        function startTrip() {
+            if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع', 'warning'); return; }
+            var name = prompt('اسم الرحلة:', 'رحلتي');
+            fetch(API_BASE + '/trips/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ name: name, lat: currentPosition.lat, lng: currentPosition.lng })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) { if (d.status === 'success') showNotification('🚗', 'بدأت الرحلة', 'success'); });
+        }
+
+        function endTrip() {
+            fetch(API_BASE + '/trips/end', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            }).then(function(r) { return r.json(); })
+            .then(function(d) { if (d.status === 'success') showNotification('🏁', 'انتهت الرحلة', 'info'); });
+        }
+
+        // ==================== المصادقة ====================
+        function register() {
+            if (isOnCooldown('register')) return;
+            var name = document.getElementById('regName').value.trim();
+            var email = document.getElementById('regEmail').value.trim();
+            var password = document.getElementById('regPassword').value;
+            var confirm = document.getElementById('regConfirmPassword').value;
+            if (!name || !email || !password || password !== confirm || password.length < 6) {
+                showNotification('❌', 'تحقق من البيانات', 'error'); return;
+            }
+            var btn = document.querySelector('#registerModal .neon-btn');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ جارٍ التسجيل...'; }
+            fetch(API_BASE + '/auth/register', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, email: email, password: password })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success') {
+                    sessionStorage.setItem('access_token', d.access_token);
+                    localStorage.setItem('access_token', d.access_token);
+                    localStorage.setItem('refresh_token', d.refresh_token);
+                    localStorage.setItem('user_id', d.user.id);
+                    localStorage.setItem('user_name', d.user.name);
+                    currentUserId = d.user.id;
+                    closeModal('registerModal');
+                    showNotification('🎉', 'مرحباً ' + d.user.name, 'success');
+                } else { showNotification('❌', d.error, 'error'); }
+            }).finally(function() { if (btn) { btn.disabled = false; btn.textContent = '✨ إنشاء الحساب'; } });
+        }
+
+        function login() {
+            if (isOnCooldown('login')) return;
+            var email = document.getElementById('loginEmail').value.trim();
+            var password = document.getElementById('loginPassword').value;
+            if (!email || !password) { showNotification('❌', 'جميع الحقول مطلوبة', 'error'); return; }
+            var btn = document.querySelector('#loginModal .neon-btn');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ جارٍ الدخول...'; }
+            fetch(API_BASE + '/auth/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success') {
+                    sessionStorage.setItem('access_token', d.access_token);
+                    localStorage.setItem('access_token', d.access_token);
+                    localStorage.setItem('refresh_token', d.refresh_token);
+                    localStorage.setItem('user_id', d.user.id);
+                    localStorage.setItem('user_name', d.user.name);
+                    currentUserId = d.user.id;
+                    closeModal('loginModal');
+                    showNotification('👋', 'أهلاً ' + d.user.name, 'success');
+                } else { showNotification('❌', d.error, 'error'); }
+            }).finally(function() { if (btn) { btn.disabled = false; btn.textContent = '🚪 دخول'; } });
+        }
+
+        function refreshToken() {
+            var refresh = localStorage.getItem('refresh_token');
+            if (!refresh) return Promise.reject();
+            return fetch(API_BASE + '/auth/refresh', { method: 'POST', headers: { 'Authorization': 'Bearer ' + refresh } })
+                .then(function(r) { return r.json(); })
+                .then(function(d) { if (d.access_token) { sessionStorage.setItem('access_token', d.access_token); localStorage.setItem('access_token', d.access_token); } });
+        }
+
+        function logout() {
+            var token = getToken();
+            if (token) fetch(API_BASE + '/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            sessionStorage.clear();
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('user_name');
+            currentUserId = null;
+            if (isTracking) stopTracking();
+            showNotification('👋', 'تم تسجيل الخروج', 'info');
+        }
+
+        function restoreUserState() {
+            var uid = localStorage.getItem('user_id');
+            if (uid) currentUserId = parseInt(uid);
+        }
+
+        // ==================== الأصدقاء ====================
+        function sendFriendRequest() {
+            var email = document.getElementById('friendEmail').value.trim();
+            if (!email) { showNotification('⚠️', 'أدخل بريداً', 'warning'); return; }
+            fetch(API_BASE + '/friends/send-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ email: email })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success') showNotification('📨', d.message, 'success');
+                else showNotification('❌', d.error, 'error');
+            });
+        }
+
+        // ==================== الإشعارات (XSS Safe) ====================
+        function showNotification(title, message, type) {
+            type = type || 'info';
+            var container = document.getElementById('notifications');
+            if (!container) return;
+            var icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+            var el = document.createElement('div');
+            el.className = 'notification ' + type;
+            var iconSpan = document.createElement('span');
+            iconSpan.style.fontSize = '20px';
+            iconSpan.textContent = icons[type] || 'ℹ️';
+            el.appendChild(iconSpan);
+            var textDiv = document.createElement('div');
+            textDiv.style.flex = '1';
+            var strongEl = document.createElement('strong');
+            strongEl.style.display = 'block'; strongEl.style.fontSize = '13px';
+            strongEl.textContent = title;
+            textDiv.appendChild(strongEl);
+            var pEl = document.createElement('p');
+            pEl.style.fontSize = '11px'; pEl.style.opacity = '0.7'; pEl.style.marginTop = '2px';
+            pEl.textContent = message;
+            textDiv.appendChild(pEl);
+            el.appendChild(textDiv);
+            var closeBtn = document.createElement('button');
+            closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.5);font-size:16px;cursor:pointer;padding:4px;';
+            closeBtn.textContent = '✕';
+            closeBtn.onclick = function() { el.remove(); };
+            el.appendChild(closeBtn);
+            container.appendChild(el);
+            setTimeout(function() { if (el.parentNode) { el.style.opacity = '0'; el.style.transition = 'all 0.4s'; setTimeout(function() { if (el.parentNode) el.remove(); }, 400); } }, 5000);
+        }
+
+        // ==================== مودالات ====================
+        function showModal(id) {
+            var m = document.getElementById(id);
+            if (m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; var inp = m.querySelector('input'); if (inp) setTimeout(function() { inp.focus(); }, 300); }
+        }
+        function closeModal(id) {
+            var m = document.getElementById(id);
+            if (m) { m.style.display = 'none'; document.body.style.overflow = ''; }
+        }
+
+        // ==================== التبويبات ====================
+        function openTab(tab) {
+            document.querySelectorAll('.bottom-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+            switch(tab) {
+                case 'map': break;
+                case 'family': showModal('familyModal'); loadFamilyContent(); break;
+                case 'friends': showModal('friendsModal'); loadFriendsContent(); break;
+                case 'trips': showModal('tripsModal'); loadTripsContent(); break;
+                case 'menu': showModal('menuModal'); break;
+            }
+        }
+
+        function loadFamilyContent() {
+            var container = document.getElementById('familyContent');
+            if (!container) return;
+            var token = getToken();
+            if (!token) { container.innerHTML = '<p style="color:rgba(255,255,255,0.5);">سجل دخول أولاً</p>'; return; }
+            fetch(API_BASE + '/family/list', { headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success' && d.families.length > 0) {
+                    var html = '';
+                    d.families.forEach(function(f) {
+                        html += '<div class="glass-card" style="margin-bottom:12px;padding:12px;">';
+                        html += '<h3 style="font-size:14px;">👨‍👩‍👧‍👦 ' + f.name + ' (' + f.member_count + ')</h3>';
+                        html += '<small style="color:rgba(255,255,255,0.5);">رمز: ' + f.join_code + '</small>';
+                        html += '<div style="margin-top:8px;">';
+                        f.members.forEach(function(m) {
+                            html += '<span style="margin:2px;">' + (m.location ? '🟢' : '🔴') + ' ' + (m.user ? m.user.name : '') + '</span> ';
+                        });
+                        html += '</div></div>';
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color:rgba(255,255,255,0.5);">لا توجد عائلة</p>';
+                    container.innerHTML += '<div style="display:flex;gap:8px;margin-top:12px;"><input type="text" id="familyName" class="glass-input" placeholder="اسم العائلة"><button class="neon-btn" onclick="createFamily()" style="font-size:11px;padding:8px 12px;">إنشاء</button></div>';
+                    container.innerHTML += '<div style="display:flex;gap:8px;margin-top:8px;"><input type="text" id="familyCode" class="glass-input" placeholder="رمز الانضمام"><button class="glass-btn" onclick="joinFamily()" style="font-size:11px;padding:8px 12px;">انضمام</button></div>';
+                }
+            });
+        }
+
+        function createFamily() {
+            var name = document.getElementById('familyName').value.trim();
+            if (!name) return;
+            fetch(API_BASE + '/family/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ name: name })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) { if (d.status === 'success') { showNotification('✅', 'تم إنشاء العائلة', 'success'); loadFamilyContent(); } });
+        }
+
+        function joinFamily() {
+            var code = document.getElementById('familyCode').value.trim();
+            if (!code) return;
+            fetch(API_BASE + '/family/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ code: code })
+            }).then(function(r) { return r.json(); })
+            .then(function(d) { if (d.status === 'success') { showNotification('✅', 'تم الانضمام', 'success'); loadFamilyContent(); } });
+        }
+
+        function loadFriendsContent() {
+            var container = document.getElementById('friendsContent');
+            if (!container) return;
+            var token = getToken();
+            if (!token) { container.innerHTML = '<p style="color:rgba(255,255,255,0.5);">سجل دخول أولاً</p>'; return; }
+            fetch(API_BASE + '/friends/list', { headers: { 'Authorization': 'Bearer ' + token } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success' && d.friends.length > 0) {
+                    var html = '';
+                    d.friends.forEach(function(f) {
+                        html += '<div class="glass-card" style="margin-bottom:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;">';
+                        html += '<span>' + (f.location ? '🟢' : '🔴') + ' ' + f.friend.name + '</span>';
+                        html += '<button onclick="removeFriend(' + f.friendship_id + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;">🗑️</button>';
+                        html += '</div>';
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color:rgba(255,255,255,0.5);">لا يوجد أصدقاء</p>';
+                }
+            });
+        }
+
+        function removeFriend(fid) {
+            if (!confirm('حذف الصديق؟')) return;
+            fetch(API_BASE + '/friends/remove/' + fid, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + getToken() } })
+            .then(function() { loadFriendsContent(); });
+        }
+
+        function loadTripsContent() {
+            var container = document.getElementById('tripsList');
+            if (!container) return;
+            fetch(API_BASE + '/trips/list', { headers: { 'Authorization': 'Bearer ' + getToken() } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success' && d.trips.length > 0) {
+                    var html = '<h3 style="font-size:13px;margin:8px 0;">📋 الرحلات السابقة</h3>';
+                    d.trips.forEach(function(t) {
+                        html += '<div class="glass-card" style="margin-bottom:6px;padding:8px;font-size:11px;">';
+                        html += '<strong>' + t.name + '</strong><br>';
+                        html += '📏 ' + t.total_distance + ' كم | ⏱️ ' + t.duration_minutes + ' د | 🏎️ ' + t.avg_speed + ' كم/س';
+                        html += '</div>';
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color:rgba(255,255,255,0.4);font-size:12px;">لا توجد رحلات</p>';
+                }
+            });
+        }
+
+        // ==================== اختصارات ====================
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 't') { e.preventDefault(); toggleTracking(); }
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); shareLocation(); }
+            if (e.ctrlKey && e.key === 'l') { e.preventDefault(); centerMapOnUser(); }
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay[style*="display: flex"]').forEach(function(m) { m.style.display = 'none'; });
+                document.body.style.overflow = '';
+            }
+        });
+
+        // ==================== Service Worker ====================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function() {});
+            });
+        }
+
+        console.log('%c🌟 GeoLegend 3D Ultimate %cReady', 'color:#00ffff;font-size:20px;', 'color:white;');
+        console.log('%c🏙️ Cesium 3D | 🧭 Nav | 👨‍👩‍👧‍👦 Family | 🚨 SOS | 🤖 AI | 🔋 Battery | 📡 Offline', 'color:#00ff88;');
+    </script>
+
+</body>
+  </html>
