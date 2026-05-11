@@ -1202,110 +1202,144 @@
 
         // ==================== تتبع الموقع ====================
         function startTracking() {
-            if (isOnCooldown('tracking')) return;
-            if (!navigator.geolocation) { showNotification('❌', 'GPS غير مدعوم', 'error'); return; }
-            var options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
-            watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
-            isTracking = true;
-            autoFollowUser = true;
-            updateTrackingUI(true);
-            showNotification('✅', 'بدأ التتبع المباشر', 'success');
-        }
-
-        function stopTracking() {
-            if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-            isTracking = false;
-            updateTrackingUI(false);
-        }
-
-        function toggleTracking() {
-            if (isOnCooldown('tracking')) return;
-            isTracking ? stopTracking() : startTracking();
-        }
-
-        function updateTrackingUI(tracking) {
-            var btn = document.getElementById('trackingBtnSide');
-            var icon = document.getElementById('trackingIconSide');
-            var text = document.getElementById('trackingTextSide');
-            var dot = document.getElementById('statusDot');
-            var status = document.getElementById('trackingStatus');
-            if (tracking) {
-                if (btn) btn.classList.add('tracking-active');
-                if (icon) icon.textContent = '⏹️';
-                if (text) text.textContent = 'إيقاف التتبع';
-                if (dot) { dot.style.color = '#00ff88'; }
-                if (status) { status.textContent = 'مباشر'; status.style.color = '#00ff88'; }
-            } else {
-                if (btn) btn.classList.remove('tracking-active');
-                if (icon) icon.textContent = '▶️';
-                if (text) text.textContent = 'بدء التتبع';
-                if (dot) { dot.style.color = '#666'; }
-                if (status) { status.textContent = 'متوقف'; status.style.color = '#666'; }
-            }
-        }
-
-        function updatePosition(position) {
-            var lat = position.coords.latitude;
-            var lng = position.coords.longitude;
-            var speed = position.coords.speed ? (position.coords.speed * 3.6) : 0;
-            var heading = position.coords.heading || 0;
-            var accuracy = position.coords.accuracy || 0;
-
-            currentPosition = { lat: lat, lng: lng, speed: speed.toFixed(1), heading: Math.round(heading), accuracy: Math.round(accuracy) };
-
-            // تحديث Cesium 3D
-            if (cesiumViewer && use3D && userEntity) {
-                userEntity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
-                pathPositions.push(lng, lat);
-                if (pathPositions.length > 400) pathPositions = pathPositions.slice(-300);
-
-                if (isTracking && autoFollowUser) {
-                    cesiumViewer.camera.flyTo({
-                        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
-                        orientation: {
-                            heading: Cesium.Math.toRadians(heading),
-                            pitch: Cesium.Math.toRadians(-45),
-                            roll: 0
-                        },
-                        duration: 0.5
-                    });
-                }
-            }
-
-            // تحديث Leaflet
-            if (leafletMap && userMarker) {
-                userMarker.setLatLng([lat, lng]);
-                if (isTracking && autoFollowUser) leafletMap.panTo([lat, lng], { animate: true, duration: 0.5 });
-                if (userPathLine) {
-                    var coords = [lat, lng];
-                    // Leaflet path
-                }
-            }
-
-            updateDisplayInfo(lat, lng, speed, heading, accuracy);
-
-            var shouldSend = !lastSentPosition ||
-                haversineDistance(lastSentPosition.lat, lastSentPosition.lng, lat, lng) > 0.005;
-
-            if (shouldSend) {
-                sendLocationToServer(lat, lng, speed, heading, accuracy);
-                lastSentPosition = { lat: lat, lng: lng };
-            }
-
-            if (Date.now() - lastBatteryCheck > 15000) {
-                lastBatteryCheck = Date.now();
-                if (speed < 2 && watchId && isTracking) {
-                    navigator.geolocation.clearWatch(watchId);
-                    watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError,
-                        { enableHighAccuracy: false, timeout: 30000, maximumAge: 10000 });
-                }
-            }
-
-            // تحديث الملاحة
-            if (navigationActive && navigationTarget) {
-                updateNavigation(lat, lng);
-            }
-        }
+		    if (!navigator.geolocation) { 
+		        showNotification('❌', 'GPS غير مدعوم في هذا المتصفح', 'error'); 
+		        return; 
+		    }
+		    
+		    showNotification('📍', 'جارٍ طلب إذن GPS...', 'info');
+		    
+		    navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+		        if (result.state === 'denied') {
+		            showNotification('❌', 'تم رفض إذن GPS. الرجاء السماح بالموقع من إعدادات المتصفح', 'error');
+		            return;
+		        }
+		        
+		        navigator.geolocation.getCurrentPosition(
+		            function(position) {
+		                var options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
+		                watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
+		                isTracking = true;
+		                autoFollowUser = true;
+		                updatePosition(position);
+		                updateTrackingUI(true);
+		                showNotification('✅', 'بدأ التتبع المباشر', 'success');
+		                console.log('✅ Tracking started successfully');
+		            },
+		            function(error) {
+		                isTracking = false;
+		                updateTrackingUI(false);
+		                var msg = '';
+		                switch(error.code) {
+		                    case error.PERMISSION_DENIED: msg = 'تم رفض إذن GPS. افتح إعدادات المتصفح > الموقع > السماح'; break;
+		                    case error.POSITION_UNAVAILABLE: msg = 'الموقع غير متوفر. تأكد من تشغيل GPS'; break;
+		                    case error.TIMEOUT: msg = 'انتهت مهلة GPS. حاول مرة أخرى'; break;
+		                    default: msg = 'خطأ: ' + error.message;
+		                }
+		                showNotification('❌', msg, 'error');
+		                console.error('❌ GPS Error:', error);
+		            },
+		            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+		        );
+		    });
+		}
+		
+		function stopTracking() {
+		    if (watchId) { 
+		        navigator.geolocation.clearWatch(watchId); 
+		        watchId = null; 
+		    }
+		    isTracking = false;
+		    updateTrackingUI(false);
+		    showNotification('⏹️', 'تم إيقاف التتبع', 'info');
+		}
+		
+		function toggleTracking() {
+		    if (isTracking) {
+		        stopTracking();
+		    } else {
+		        startTracking();
+		    }
+		}
+		
+		function updateTrackingUI(tracking) {
+		    var btn = document.getElementById('trackingBtnSide');
+		    var icon = document.getElementById('trackingIconSide');
+		    var text = document.getElementById('trackingTextSide');
+		    var dot = document.getElementById('statusDot');
+		    var status = document.getElementById('trackingStatus');
+		    if (tracking) {
+		        if (btn) btn.classList.add('tracking-active');
+		        if (icon) icon.textContent = '⏹️';
+		        if (text) text.textContent = 'إيقاف التتبع';
+		        if (dot) { dot.style.color = '#00ff88'; dot.textContent = '●'; }
+		        if (status) { status.textContent = 'مباشر'; status.style.color = '#00ff88'; }
+		    } else {
+		        if (btn) btn.classList.remove('tracking-active');
+		        if (icon) icon.textContent = '▶️';
+		        if (text) text.textContent = 'بدء التتبع';
+		        if (dot) { dot.style.color = '#666'; dot.textContent = '●'; }
+		        if (status) { status.textContent = 'متوقف'; status.style.color = '#666'; }
+		    }
+		}
+		
+		function updatePosition(position) {
+		    var lat = position.coords.latitude;
+		    var lng = position.coords.longitude;
+		    var speed = position.coords.speed ? (position.coords.speed * 3.6) : 0;
+		    var heading = position.coords.heading || 0;
+		    var accuracy = position.coords.accuracy || 0;
+		
+		    currentPosition = { lat: lat, lng: lng, speed: speed.toFixed(1), heading: Math.round(heading), accuracy: Math.round(accuracy) };
+		
+		    // تحديث Cesium 3D
+		    if (cesiumViewer && use3D && userEntity) {
+		        userEntity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
+		        pathPositions.push(lng, lat);
+		        if (pathPositions.length > 400) pathPositions = pathPositions.slice(-300);
+		
+		        if (isTracking && autoFollowUser) {
+		            cesiumViewer.camera.flyTo({
+		                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
+		                orientation: {
+		                    heading: Cesium.Math.toRadians(heading),
+		                    pitch: Cesium.Math.toRadians(-45),
+		                    roll: 0
+		                },
+		                duration: 0.5
+		            });
+		        }
+		    }
+		
+		    // تحديث Leaflet
+		    if (leafletMap && userMarker) {
+		        userMarker.setLatLng([lat, lng]);
+		        if (isTracking && autoFollowUser) leafletMap.panTo([lat, lng], { animate: true, duration: 0.5 });
+		    }
+		
+		    updateDisplayInfo(lat, lng, speed, heading, accuracy);
+		
+		    var shouldSend = !lastSentPosition ||
+		        haversineDistance(lastSentPosition.lat, lastSentPosition.lng, lat, lng) > 0.005;
+		
+		    if (shouldSend) {
+		        sendLocationToServer(lat, lng, speed, heading, accuracy);
+		        lastSentPosition = { lat: lat, lng: lng };
+		    }
+		
+		    if (Date.now() - lastBatteryCheck > 15000) {
+		        lastBatteryCheck = Date.now();
+		        if (speed < 2 && watchId && isTracking) {
+		            navigator.geolocation.clearWatch(watchId);
+		            watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError,
+		                { enableHighAccuracy: false, timeout: 30000, maximumAge: 10000 });
+		        }
+		    }
+		
+		    if (navigationActive && navigationTarget) {
+		        updateNavigation(lat, lng);
+		    }
+		}
 
         function handleGeolocationError(error) {
             var msg = '';
