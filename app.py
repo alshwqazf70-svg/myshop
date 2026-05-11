@@ -24,6 +24,7 @@ from logging.handlers import RotatingFileHandler
 from collections import defaultdict
 import time
 import secrets
+import sys
 
 # ====== إعدادات التطبيق ======
 app = Flask(__name__)
@@ -113,6 +114,11 @@ if not app.debug and not app.testing:
 
 # وقت بدء التشغيل للمراقبة
 app.start_time = time.time()
+
+# ====== طباعة معلومات التشخيص ======
+print(f"Python version: {sys.version}")
+print(f"Starting GeoLegend Ultimate...")
+print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 # ====== حماية ضد هجمات القوة العمياء (Brute Force) ======
 class BruteForceProtection:
@@ -866,9 +872,9 @@ def calculate_distance_matrix(points):
 @socketio.on('connect')
 def handle_connect():
     """معالجة اتصال SocketIO مع المصادقة"""
-    token = request.args.get('token')
-    if token:
-        try:
+    try:
+        token = request.args.get('token')
+        if token:
             # التحقق من JWT token
             from flask_jwt_extended import decode_token
             decoded = decode_token(token)
@@ -876,9 +882,8 @@ def handle_connect():
             if user_id:
                 join_room(f'user_{user_id}')
                 app.logger.info(f'User {user_id} connected via SocketIO')
-        except Exception as e:
-            app.logger.warning(f'Invalid SocketIO token: {str(e)}')
-    # لا نرفض الاتصال حتى بدون توكن للسماح بالمشاهدة العامة
+    except Exception as e:
+        app.logger.warning(f'Invalid SocketIO token: {str(e)}')
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -1590,8 +1595,410 @@ def get_navigation_route():
         app.logger.error(f'Navigation error: {str(e)}')
         return jsonify({'error': 'حدث خطأ في حساب المسار'}), 500
 
-# ====== باقي API مع تحسينات ======
-# [باقي المسارات تبقى كما هي مع إضافة معالجة أخطاء محسنة]
+# ====== API الأصدقاء ======
+@app.route('/api/friends/send-request', methods=['POST'])
+@jwt_required()
+@limiter.limit("30 per minute")
+def send_friend_request():
+    try:
+        requester_id = int(get_jwt_identity())
+        data = request.get_json()
+        email = sanitize_input(data.get('email', '')).lower().strip()
+        if not email: return jsonify({'error': 'البريد الإلكتروني مطلوب'}), 400
+        
+        addressee = User.query.filter_by(email=email).first()
+        if not addressee: return jsonify({'error': 'المستخدم غير موجود'}), 404
+        if addressee.id == requester_id: return jsonify({'error': 'لا يمكنك إرسال طلب لنفسك'}), 400
+        
+        existing = Friendship.query.filter(
+            ((Friendship.requester_id == requester_id) & (Friendship.addressee_id == addressee.id)) |
+            ((Friendship.requester_id == addressee.id) & (Friendship.addressee_id == requester_id))
+        ).first()
+        if existing:
+            if existing.status == 'pending': return jsonify({'error': 'يوجد طلب معلق بالفعل'}), 409
+            elif existing.status == 'accepted': return jsonify({'error': 'أنتما أصدقاء بالفعل'}), 409
+        
+        friendship = Friendship(requester_id=requester_id, addressee_id=addressee.id)
+        db.session.add(friendship)
+        db.session.commit()
+        
+        create_notification(addressee.id, '👥 طلب صداقة', f'طلب صداقة من {User.query.get(requester_id).name}', 'friend_request')
+        return jsonify({'status': 'success', 'message': 'تم إرسال الطلب'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/friends/requests', methods=['GET'])
+@jwt_required()
+def get_friend_requests():
+    try:
+        user_id = int(get_jwt_identity())
+        requests = Friendship.query.filter_by(addressee_id=user_id, status='pending').all()
+        return jsonify({'status': 'success', 'requests': [
+            {'id': r.id, 'sender': User.query.get(r.requester_id).to_dict()} for r in requests
+        ]})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/friends/respond/<int:request_id>', methods=['POST'])
+@jwt_required()
+def respond_friend_request(request_id):
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        action = data.get('action', 'accept')
+        
+        friendship = Friendship.query.get(request_id)
+        if not friendship or friendship.addressee_id != user_id:
+            return jsonify({'error': 'غير مصرح'}), 403
+        
+        friendship.status = 'accepted' if action == 'accept' else 'rejected'
+        friendship.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'تم ' + ('قبول' if action == 'accept' else 'رفض') + ' الطلب'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/friends/list', methods=['GET'])
+@jwt_required()
+def get_friends_list():
+    try:
+        user_id = int(get_jwt_identity())
+        friendships = Friendship.query.filter(
+            ((Friendship.requester_id == user_id) | (Friendship.addressee_id == user_id)),
+            Friendship.status == 'accepted'
+        ).all()
+        friends = []
+        for f in friendships:
+            fid = f.addressee_id if f.requester_id == user_id else f.requester_id
+            friend = User.query.get(fid)
+            if friend:
+                loc = CurrentLocation.query.filter_by(user_id=fid).first()
+                friends.append({'friendship_id': f.id, 'friend': friend.to_dict(),
+                               'location': loc.to_dict() if loc else None})
+        return jsonify({'status': 'success', 'friends': friends})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/friends/remove/<int:friendship_id>', methods=['DELETE'])
+@jwt_required()
+def remove_friend(friendship_id):
+    try:
+        user_id = int(get_jwt_identity())
+        friendship = Friendship.query.get(friendship_id)
+        if not friendship or (friendship.requester_id != user_id and friendship.addressee_id != user_id):
+            return jsonify({'error': 'غير مصرح'}), 403
+        
+        db.session.delete(friendship)
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'تم حذف الصديق'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+# ====== API العائلة ======
+@app.route('/api/family/create', methods=['POST'])
+@jwt_required()
+def create_family():
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        name = sanitize_input(data.get('name', 'عائلتي'))
+        if not name: return jsonify({'error': 'اسم العائلة مطلوب'}), 400
+        
+        import random, string
+        join_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        
+        family = Family(name=name, creator_id=user_id, join_code=join_code)
+        db.session.add(family)
+        db.session.flush()
+        
+        member = FamilyMember(family_id=family.id, user_id=user_id, role='admin')
+        db.session.add(member)
+        db.session.commit()
+        
+        return jsonify({'status': 'success', 'family': {
+            'id': family.id, 'name': family.name, 'join_code': family.join_code,
+            'created_at': family.created_at.isoformat()
+        }})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/family/join', methods=['POST'])
+@jwt_required()
+def join_family():
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        join_code = data.get('code', '').strip().upper()
+        if not join_code: return jsonify({'error': 'رمز الانضمام مطلوب'}), 400
+        
+        family = Family.query.filter_by(join_code=join_code, is_active=True).first()
+        if not family: return jsonify({'error': 'رمز الانضمام غير صحيح'}), 404
+        
+        existing = FamilyMember.query.filter_by(family_id=family.id, user_id=user_id).first()
+        if existing: return jsonify({'error': 'أنت بالفعل عضو في هذه العائلة'}), 409
+        
+        member = FamilyMember(family_id=family.id, user_id=user_id)
+        db.session.add(member)
+        db.session.commit()
+        
+        create_notification(family.creator_id, '👨‍👩‍👧‍👦 عضو جديد', f'انضم {User.query.get(user_id).name} إلى العائلة')
+        return jsonify({'status': 'success', 'message': 'تم الانضمام إلى العائلة'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/family/list', methods=['GET'])
+@jwt_required()
+def list_families():
+    try:
+        user_id = int(get_jwt_identity())
+        memberships = FamilyMember.query.filter_by(user_id=user_id).all()
+        families = []
+        for m in memberships:
+            family = Family.query.get(m.family_id)
+            if family:
+                member_count = FamilyMember.query.filter_by(family_id=family.id).count()
+                members = FamilyMember.query.filter_by(family_id=family.id).all()
+                members_list = []
+                for mem in members:
+                    u = User.query.get(mem.user_id)
+                    loc = CurrentLocation.query.filter_by(user_id=mem.user_id).first()
+                    members_list.append({
+                        'user': u.to_dict() if u else None,
+                        'role': mem.role,
+                        'location': loc.to_dict() if loc else None
+                    })
+                families.append({
+                    'id': family.id, 'name': family.name, 'join_code': family.join_code,
+                    'my_role': m.role, 'member_count': member_count, 'members': members_list
+                })
+        return jsonify({'status': 'success', 'families': families})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+# ====== API المشاركة ======
+@app.route('/api/share/create', methods=['POST'])
+@jwt_required()
+@limiter.limit("20 per minute")
+def create_share():
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json() if request.is_json else {}
+        minutes = data.get('minutes')
+        is_private = data.get('is_private', False)
+        share_pin = data.get('pin') if is_private else None
+        
+        expiry = None
+        if minutes:
+            try:
+                minutes_int = int(minutes)
+                if minutes_int < 1 or minutes_int > 1440:
+                    return jsonify({'error': 'المدة بين 1 و 1440 دقيقة'}), 400
+                expiry = datetime.now(timezone.utc) + timedelta(minutes=minutes_int)
+            except: pass
+        
+        room = Room(creator_id=user_id, participants=str(user_id), expiry=expiry,
+                   is_private=is_private, share_pin=share_pin)
+        db.session.add(room)
+        db.session.commit()
+        
+        return jsonify({'status': 'success', 'room_id': room.room_id,
+                       'full_url': f'{request.host_url.rstrip("/")}/share/{room.room_id}',
+                       'expires_at': room.expiry.isoformat() if room.expiry else None})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+# ====== API الرحلات ======
+@app.route('/api/trips/start', methods=['POST'])
+@jwt_required()
+def start_trip():
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        name = sanitize_input(data.get('name', 'رحلة جديدة'))
+        lat, lng = data.get('lat'), data.get('lng')
+        if not lat or not lng: return jsonify({'error': 'الإحداثيات مطلوبة'}), 400
+        
+        Trip.query.filter_by(user_id=user_id, is_active=True).update({'is_active': False, 'ended_at': datetime.now(timezone.utc)})
+        trip = Trip(user_id=user_id, name=name, start_lat=float(lat), start_lng=float(lng))
+        db.session.add(trip)
+        db.session.commit()
+        return jsonify({'status': 'success', 'trip': trip.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/trips/end', methods=['POST'])
+@jwt_required()
+def end_trip():
+    try:
+        user_id = int(get_jwt_identity())
+        trip = Trip.query.filter_by(user_id=user_id, is_active=True).first()
+        if not trip: return jsonify({'error': 'لا توجد رحلة نشطة'}), 404
+        
+        trip.is_active = False
+        trip.ended_at = datetime.now(timezone.utc)
+        trip.duration_minutes = round((trip.ended_at - trip.started_at).total_seconds() / 60, 1)
+        db.session.commit()
+        return jsonify({'status': 'success', 'trip': trip.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/trips/list', methods=['GET'])
+@jwt_required()
+def list_trips():
+    try:
+        user_id = int(get_jwt_identity())
+        trips = Trip.query.filter_by(user_id=user_id).order_by(Trip.started_at.desc()).limit(50).all()
+        return jsonify({'status': 'success', 'trips': [t.to_dict() for t in trips]})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+# ====== API Geofencing ======
+@app.route('/api/geofences/create', methods=['POST'])
+@jwt_required()
+def create_geofence():
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json()
+        name = sanitize_input(data.get('name', ''))
+        lat, lng, radius = data.get('lat'), data.get('lng'), data.get('radius', 100)
+        if not name or not lat or not lng: return jsonify({'error': 'جميع الحقول مطلوبة'}), 400
+        
+        geofence = Geofence(user_id=user_id, name=name, lat=float(lat), lng=float(lng), radius=float(radius))
+        db.session.add(geofence)
+        db.session.commit()
+        return jsonify({'status': 'success', 'geofence': geofence.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/geofences/list', methods=['GET'])
+@jwt_required()
+def list_geofences():
+    try:
+        user_id = int(get_jwt_identity())
+        geofences = Geofence.query.filter_by(user_id=user_id).all()
+        return jsonify({'status': 'success', 'geofences': [g.to_dict() for g in geofences]})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+# ====== API الإشعارات ======
+@app.route('/api/notifications/list', methods=['GET'])
+@jwt_required()
+def list_notifications():
+    try:
+        user_id = int(get_jwt_identity())
+        notifs = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).limit(50).all()
+        return jsonify({'status': 'success', 'notifications': [n.to_dict() for n in notifs]})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/notifications/unread-count', methods=['GET'])
+@jwt_required()
+def unread_count():
+    try:
+        user_id = int(get_jwt_identity())
+        count = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+        return jsonify({'status': 'success', 'count': count})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+# ====== API الإحصائيات والتحليلات ======
+@app.route('/api/dashboard/stats', methods=['GET'])
+@cache.cached(timeout=60)
+def dashboard_stats():
+    try:
+        five_min_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
+        return jsonify({'status': 'success', 'stats': {
+            'total_users': User.query.count(),
+            'online_users': CurrentLocation.query.filter(CurrentLocation.updated_at >= five_min_ago).count(),
+            'active_rooms': Room.query.filter_by(is_active=True).count(),
+            'pending_sos': SOSAlert.query.filter_by(resolved=False).count()
+        }})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/analytics/daily', methods=['GET'])
+@jwt_required()
+def daily_analytics():
+    try:
+        user_id = int(get_jwt_identity())
+        today = datetime.now(timezone.utc).date()
+        snapshot = AnalyticsSnapshot.query.filter_by(user_id=user_id, date=today).first()
+        if not snapshot:
+            return jsonify({'status': 'success', 'analytics': {'total_distance': 0, 'total_time': 0, 'locations': 0, 'trips': 0}})
+        return jsonify({'status': 'success', 'analytics': {
+            'total_distance': round(snapshot.total_distance, 2),
+            'total_time_minutes': round(snapshot.total_time_minutes, 1),
+            'locations_count': snapshot.locations_count,
+            'trips_count': snapshot.trips_count,
+            'avg_speed': round(snapshot.avg_speed, 1)
+        }})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+@app.route('/api/analytics/movement-pattern', methods=['GET'])
+@jwt_required()
+def movement_pattern():
+    try:
+        user_id = int(get_jwt_identity())
+        recent = LocationHistory.query.filter_by(user_id=user_id)\
+            .order_by(LocationHistory.timestamp.desc()).limit(50).all()
+        if len(recent) < 5:
+            return jsonify({'status': 'success', 'analysis': {'pattern': 'غير كاف', 'confidence': 0}})
+        
+        locs = [{'lat': l.lat, 'lng': l.lng, 'speed': l.speed, 'timestamp': l.timestamp} for l in reversed(recent)]
+        analysis = analyze_movement(locs)
+        return jsonify({'status': 'success', 'analysis': analysis})
+    except Exception as e:
+        return jsonify({'error': 'حدث خطأ'}), 500
+
+# ====== API SOS ======
+@app.route('/api/sos', methods=['POST'])
+@jwt_required()
+@limiter.limit("10 per minute")
+def send_sos():
+    try:
+        user_id = int(get_jwt_identity())
+        if not request.is_json: return jsonify({'error': 'يجب إرسال JSON'}), 400
+        data = request.get_json()
+        lat, lng = data.get('lat'), data.get('lng')
+        message = sanitize_input(data.get('message', '🚨 طلب مساعدة عاجل'))
+        
+        if lat is None or lng is None: return jsonify({'error': 'الإحداثيات مطلوبة'}), 400
+        if not is_valid_coordinates(lat, lng): return jsonify({'error': 'إحداثيات غير صالحة'}), 400
+        
+        sos = SOSAlert(user_id=user_id, lat=float(lat), lng=float(lng), message=message[:500])
+        db.session.add(sos)
+        db.session.commit()
+        
+        socketio.emit('sos_alert', {
+            'user_id': user_id, 'lat': float(lat), 'lng': float(lng),
+            'message': message[:500], 'timestamp': datetime.now(timezone.utc).isoformat()
+        }, broadcast=True)
+        
+        # إشعار الأصدقاء والعائلة
+        friendships = Friendship.query.filter(
+            ((Friendship.requester_id == user_id) | (Friendship.addressee_id == user_id)),
+            Friendship.status == 'accepted'
+        ).all()
+        for f in friendships:
+            fid = f.addressee_id if f.requester_id == user_id else f.requester_id
+            create_notification(fid, '🚨 SOS!', f'إشارة طوارئ من {User.query.get(user_id).name}', 'sos')
+        
+        notify_family_members(user_id, f'🚨 إشارة طوارئ من {User.query.get(user_id).name}!')
+        
+        return jsonify({'status': 'success', 'message': 'تم إرسال إشارة الطوارئ', 'alert_id': sos.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'حدث خطأ'}), 500
 
 # ====== خدمة الملفات محسنة ======
 @app.route('/manifest.json')
@@ -1684,69 +2091,15 @@ def favicon():
 @app.route('/static/<path:filename>')
 def custom_static(filename):
     """خدمة الملفات الثابتة مع التخزين المؤقت"""
-    response = send_file(f'static/{filename}')
-    if filename.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg')):
-        response.headers['Cache-Control'] = 'public, max-age=31536000'
-    elif filename.endswith(('.css', '.js')):
-        response.headers['Cache-Control'] = 'public, max-age=604800'
-    return response
-
-# ====== أوامر CLI للصيانة ======
-@app.cli.command("cleanup-old-data")
-def cleanup_old_data():
-    """تنظيف البيانات القديمة"""
-    with app.app_context():
-        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-        
-        # حذف سجل المواقع القديم
-        deleted_locations = LocationHistory.query.filter(
-            LocationHistory.timestamp < thirty_days_ago
-        ).delete()
-        
-        # حذف الإشعارات المقروءة القديمة
-        deleted_notifications = Notification.query.filter(
-            Notification.created_at < thirty_days_ago,
-            Notification.is_read == True
-        ).delete()
-        
-        # حذف التوكنات المنتهية
-        deleted_tokens = TokenBlocklist.query.filter(
-            TokenBlocklist.created_at < thirty_days_ago
-        ).delete()
-        
-        db.session.commit()
-        print(f"""
-        تنظيف البيانات:
-        - {deleted_locations} سجل موقع
-        - {deleted_notifications} إشعار
-        - {deleted_tokens} توكن منتهي
-        """)
-
-@app.cli.command("reset-brute-force")
-def reset_brute_force():
-    """إعادة تعيين حماية القوة العمياء"""
-    with app.app_context():
-        brute_force.attempts.clear()
-        print("تم إعادة تعيين حماية القوة العمياء")
-
-@app.cli.command("stats")
-def show_stats():
-    """عرض إحصائيات النظام"""
-    with app.app_context():
-        total_users = User.query.count()
-        online_users = CurrentLocation.query.filter(
-            CurrentLocation.updated_at >= datetime.now(timezone.utc) - timedelta(minutes=5)
-        ).count()
-        total_locations = LocationHistory.query.count()
-        active_trips = Trip.query.filter_by(is_active=True).count()
-        
-        print(f"""
-        إحصائيات GeoLegend:
-        - المستخدمين: {total_users}
-        - المتصلين الآن: {online_users}
-        - سجل المواقع: {total_locations}
-        - الرحلات النشطة: {active_trips}
-        """)
+    try:
+        response = send_file(f'static/{filename}')
+        if filename.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg')):
+            response.headers['Cache-Control'] = 'public, max-age=31536000'
+        elif filename.endswith(('.css', '.js')):
+            response.headers['Cache-Control'] = 'public, max-age=604800'
+        return response
+    except FileNotFoundError:
+        return jsonify({'error': 'الملف غير موجود'}), 404
 
 # ====== معالجة الأخطاء ======
 @app.errorhandler(400)
@@ -1775,11 +2128,16 @@ def internal_error(error):
     app.logger.error(f'Internal server error: {str(error)}')
     return jsonify({'error': 'خطأ داخلي في الخادم'}), 500
 
+# ====== مهم جداً لـ Gunicorn/Render ======
+# هذا المتغير يسمح لـ Gunicorn بالعثور على التطبيق
+application = app
+
 # ====== نقطة البداية ======
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         app.logger.info('Database tables created')
+        print('✅ Database tables created successfully')
     
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
