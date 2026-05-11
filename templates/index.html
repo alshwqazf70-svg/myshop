@@ -806,30 +806,36 @@
         var navigationActive = false;
         var navigationTarget = null;
 
-        // ====== Cooldown System ======
-        var cooldowns = {
-            lastSOS: 0, lastShare: 0, lastLogin: 0, lastRegister: 0,
-            lastTrackingToggle: 0, lastMapLayer: 0, lastCopy: 0, lastCenter: 0
-        };
-
-        var COOLDOWN_TIMES = {
-            sos: 30000, share: 10000, login: 5000, register: 5000,
-            tracking: 3000, mapLayer: 2000, copy: 3000, center: 2000
-        };
-
-        function isOnCooldown(action) {
-            var now = Date.now();
-            var key = 'last' + action.charAt(0).toUpperCase() + action.slice(1);
-            var lastTime = cooldowns[key] || 0;
-            var cooldownTime = COOLDOWN_TIMES[action] || 3000;
-            if (now - lastTime < cooldownTime) {
-                var remaining = Math.ceil((cooldownTime - (now - lastTime)) / 1000);
-                showNotification('⏳ انتظر', 'يمكنك المحاولة بعد ' + remaining + ' ثانية', 'warning');
-                return true;
-            }
-            cooldowns[key] = now;
-            return false;
-        }
+        // ====== Cooldown System (مُصلح - يعمل بشكل صحيح) ======
+		var cooldowns = {};
+		
+		var COOLDOWN_TIMES = {
+		    sos: 10000,
+		    share: 5000,
+		    login: 5000,
+		    register: 5000,
+		    tracking: 500,
+		    mapLayer: 1000,
+		    copy: 2000,
+		    center: 500
+		};
+		
+		function isOnCooldown(action) {
+		    var now = Date.now();
+		    var lastTime = cooldowns[action] || 0;
+		    var cooldownTime = COOLDOWN_TIMES[action] || 500;
+		    
+		    if (now - lastTime < cooldownTime) {
+		        var remaining = Math.ceil((cooldownTime - (now - lastTime)) / 1000);
+		        if (remaining > 0) {
+		            showNotification('⏳ انتظر', 'يمكنك المحاولة بعد ' + remaining + ' ثانية', 'warning');
+		        }
+		        return true;
+		    }
+		    
+		    cooldowns[action] = now;
+		    return false;
+		}
 
         // ====== طبقات الخريطة ======
         var mapLayers = [
@@ -1771,4 +1777,4 @@
     </script>
 
 </body>
-  </html>
+</html>
