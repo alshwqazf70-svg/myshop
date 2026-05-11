@@ -891,7 +891,7 @@
         function initCesiumMap() {
             try {
                 // توجيه Cesium لاستخدام assets من المسار الصحيح
-                Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ODliYjg2ZS0xNmUxLTRhZGItYTE5MC02MjM3YjlmNDRhMWUiLCJpZCI6NDMwMjEyLCJpc3MiOiJodHRwczovL2lvbi5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3Nzg1MjIyMTh9.6Niv2TJrSTmBv6o2TUD-xB-sM6eP9nakNe9Nf1D70Xg'; // لا نحتاج توكن
+                Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4MjU1YmMwOS03MWYwLTQ3NzItYjg4My1mM2VkNTEwMTUwODMiLCJpZCI6NDMwMjEyLCJzdWIiOiJNYWxlazc3MzciLCJpc3MiOiJodHRwczovL2lvbi5jZXNpdW0uY29tIiwiYXVkIjoiVW50aXRsZWRNYWxlayIsImlhdCI6MTc3ODUyMzM2MX0.NlGhCuwcHYQRsY04L84BAicL6kt_DewkVPsZTvcOe3w'; // لا نحتاج توكن
                 Cesium.buildModuleUrl.setBaseUrl('https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/');
 
                 cesiumViewer = new Cesium.Viewer('cesiumContainer', {
