@@ -19,9 +19,7 @@ cryptography==41.0.7
 
 # ====== WebSocket ======
 python-socketio==5.11.1
-eventlet==0.34.1
-gevent==23.9.1
-gevent-websocket==0.10.1
+simple-websocket==1.0.0
 
 # ====== HTTP & API ======
 requests==2.31.0
