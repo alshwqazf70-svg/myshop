@@ -1257,14 +1257,19 @@
 		        
 		        navigator.geolocation.getCurrentPosition(
 		            function(position) {
-		                var options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
+		                // ✅ إعدادات محسنة للدقة العالية
+		                var options = { 
+		                    enableHighAccuracy: true, 
+		                    timeout: 30000, 
+		                    maximumAge: 0 
+		                };
 		                watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
 		                isTracking = true;
 		                autoFollowUser = true;
 		                updatePosition(position);
 		                updateTrackingUI(true);
-		                showNotification('✅', 'بدأ التتبع المباشر', 'success');
-		                console.log('✅ Tracking started successfully');
+		                showNotification('✅', 'بدأ التتبع المباشر بدقة عالية', 'success');
+		                console.log('✅ Tracking started with high accuracy');
 		            },
 		            function(error) {
 		                isTracking = false;
@@ -1279,7 +1284,7 @@
 		                showNotification('❌', msg, 'error');
 		                console.error('❌ GPS Error:', error);
 		            },
-		            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+		            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
 		        );
 		    });
 		}
@@ -1329,6 +1334,21 @@
 		    var speed = position.coords.speed ? (position.coords.speed * 3.6) : 0;
 		    var heading = position.coords.heading || 0;
 		    var accuracy = position.coords.accuracy || 0;
+		
+		    // ✅ تجاهل التحديثات ضعيفة الدقة (أكثر من 50 متر خطأ)
+		    if (accuracy > 50) {
+		        console.log('⚠️ تجاهل تحديث ضعيف الدقة: ' + accuracy + 'م');
+		        return;
+		    }
+		
+		    // ✅ تجاهل الحركات الصغيرة جداً (أقل من 3 أمتار) عندما تكون السرعة شبه معدومة
+		    if (currentPosition) {
+		        var dist = haversineDistance(currentPosition.lat, currentPosition.lng, lat, lng);
+		        if (dist < 0.003 && speed < 0.5) {
+		            console.log('⚠️ تجاهل حركة صغيرة: ' + (dist * 1000).toFixed(1) + 'م');
+		            return;
+		        }
+		    }
 		
 		    currentPosition = { lat: lat, lng: lng, speed: speed.toFixed(1), heading: Math.round(heading), accuracy: Math.round(accuracy) };
 		
