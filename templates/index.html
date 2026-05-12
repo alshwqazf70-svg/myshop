@@ -801,7 +801,7 @@
         var isTracking = false;
         var currentPosition = null;
         var currentUserId = null;
-        var currentMapLayer = 0;
+        var currentMapLayer = 1;
         var use3D = true;
         var socket = null;
         var API_BASE = '/api';
@@ -1036,52 +1036,84 @@
 
         // ==================== تهيئة SocketIO ====================
         function initSocketIO() {
-            try {
-                socket = io.connect(window.location.origin, {
-                    transports: ['websocket', 'polling'],
-                    reconnection: true,
-                    reconnectionAttempts: 10,
-                    reconnectionDelay: 1000
-                });
-
-                socket.on('connect', function() { console.log('🔗 SocketIO متصل'); });
-                socket.on('location_update', function(data) {
-                    if (data.user_id === currentUserId) return;
-                    updateOtherUserMarker(data);
-                });
-                socket.on('family_location_update', function(data) {
-                    updateOtherUserMarker(data);
-                });
-                socket.on('sos_alert', function(data) {
-                    showNotification('🚨 SOS!', 'إشارة طوارئ من مستخدم ' + data.user_id, 'error');
-                    if (cesiumViewer && use3D) {
-                        cesiumViewer.entities.add({
-                            position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 200),
-                            billboard: {
-                                image: createSOSMarkerImage(),
-                                scale: 0.5,
-                                verticalOrigin: Cesium.VerticalOrigin.BOTTOM
-                            },
-                            label: {
-                                text: '🚨 SOS!\n' + (data.message || ''),
-                                font: '12px Cairo',
-                                fillColor: Cesium.Color.RED,
-                                outlineColor: Cesium.Color.BLACK,
-                                outlineWidth: 2,
-                                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                                verticalOrigin: Cesium.VerticalOrigin.TOP,
-                                pixelOffset: new Cesium.Cartesian2(0, 20)
-                            }
-                        });
-                    }
-                });
-                socket.on('new_notification', function(data) {
-                    showNotification(data.title, data.message, data.type);
-                });
-            } catch (error) {
-                console.warn('⚠️ SocketIO غير متاح');
-            }
-        }
+		    try {
+		        socket = io.connect(window.location.origin, {
+		            transports: ['websocket', 'polling'],
+		            reconnection: true,
+		            reconnectionAttempts: 10,
+		            reconnectionDelay: 1000
+		        });
+		
+		        socket.on('connect', function() {
+		            console.log('🔗 SocketIO متصل');
+		            
+		            // ✅ الانضمام التلقائي لغرفة المشاركة عند فتح رابط share
+		            var path = window.location.pathname;
+		            var shareMatch = path.match(/\/share\/(.+)/);
+		            if (shareMatch && shareMatch[1]) {
+		                socket.emit('join_share_room', { room_id: shareMatch[1] });
+		                console.log('📡 انضم إلى غرفة المشاركة: ' + shareMatch[1]);
+		                showNotification('🔗', 'تم الانضمام إلى جلسة المشاركة - انتظر ظهور الموقع...', 'info');
+		            }
+		        });
+		        
+		        socket.on('location_update', function(data) {
+		            console.log('📍 استقبال موقع:', data);
+		            if (data.user_id === currentUserId) return;
+		            updateOtherUserMarker(data);
+		            
+		            // ✅ إذا كان المستخدم في صفحة مشاركة، تحريك الكاميرا إلى موقع المشارك
+		            var path = window.location.pathname;
+		            if (path.includes('/share/') && cesiumViewer && use3D) {
+		                cesiumViewer.camera.flyTo({
+		                    destination: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 800),
+		                    orientation: {
+		                        heading: Cesium.Math.toRadians(0),
+		                        pitch: Cesium.Math.toRadians(-45),
+		                        roll: 0
+		                    },
+		                    duration: 2
+		                });
+		                document.title = '🔗 ' + (data.name || 'مشارك') + ' - GeoLegend';
+		            }
+		        });
+		        
+		        socket.on('family_location_update', function(data) {
+		            updateOtherUserMarker(data);
+		        });
+		        
+		        socket.on('sos_alert', function(data) {
+		            showNotification('🚨 SOS!', 'إشارة طوارئ من مستخدم ' + data.user_id, 'error');
+		            if (cesiumViewer && use3D) {
+		                cesiumViewer.entities.add({
+		                    position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 200),
+		                    billboard: {
+		                        image: createSOSMarkerImage(),
+		                        scale: 0.5,
+		                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+		                    },
+		                    label: {
+		                        text: '🚨 SOS!\n' + (data.message || ''),
+		                        font: '12px Cairo',
+		                        fillColor: Cesium.Color.RED,
+		                        outlineColor: Cesium.Color.BLACK,
+		                        outlineWidth: 2,
+		                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+		                        verticalOrigin: Cesium.VerticalOrigin.TOP,
+		                        pixelOffset: new Cesium.Cartesian2(0, 20)
+		                    }
+		                });
+		            }
+		        });
+		        
+		        socket.on('new_notification', function(data) {
+		            showNotification(data.title, data.message, data.type);
+		        });
+		        
+		    } catch (error) {
+		        console.warn('⚠️ SocketIO غير متاح');
+		    }
+		}
 
         function createSOSMarkerImage() {
             var canvas = document.createElement('canvas');
