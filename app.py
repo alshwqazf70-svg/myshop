@@ -2083,7 +2083,7 @@ def manifest():
 def service_worker():
 
     sw_code = """
-const CACHE_NAME = 'geolegend-v6';
+const CACHE_NAME = 'geolegend-v7';
 
 // INSTALL - تخزين أولي للصفحة الرئيسية
 self.addEventListener('install', (event) => {
