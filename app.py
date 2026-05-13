@@ -839,17 +839,22 @@ def handle_join_group(data):
 
 @socketio.on('join_share_room')
 def handle_join_share(data):
-    """انضمام مستخدم إلى غرفة مشاركة"""
+    """✅ انضمام إلى غرفة مشاركة - متاح للجميع بدون JWT"""
     room_id = data.get('room_id')
+    print(f'🔗 join_share_room called with room_id: {room_id}')
+    
     if room_id:
         join_room(f'share_{room_id}')
         print(f'🔗 مستخدم انضم إلى غرفة المشاركة: {room_id}')
         
-        # ✅ إرسال الموقع الحالي فوراً
         room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+        print(f'🔍 Room found: {room}')
+        
         if room:
             current_location = CurrentLocation.query.filter_by(user_id=room.creator_id).first()
             user = User.query.get(room.creator_id)
+            print(f'🔍 Location: {current_location}, User: {user}')
+            
             if current_location and user:
                 socketio.emit('location_update', {
                     'user_id': room.creator_id,
@@ -863,6 +868,10 @@ def handle_join_share(data):
                 print(f'✅ تم إرسال موقع {user.name} إلى غرفة {room_id}')
             else:
                 print(f'⚠️ لا يوجد موقع حالي للمستخدم {room.creator_id}')
+        else:
+            print(f'❌ الغرفة غير موجودة أو غير نشطة')
+    else:
+        print(f'❌ لا يوجد room_id')
 
 @socketio.on('ping_server')
 def handle_ping():
@@ -872,6 +881,10 @@ def handle_ping():
 @app.before_request
 def before_request():
     request.start_time = time.time()
+    
+    # ✅ السماح لمسارات المشاركة بدون User-Agent
+    if request.path.startswith('/share/') or request.path.startswith('/api/share/'):
+        return
     
     user_agent = request.headers.get('User-Agent', '')
     if not user_agent:
@@ -906,10 +919,20 @@ def shutdown_session(exception=None):
 def index():
     return render_template('index.html')
 
+# ✅ صفحة المشاركة - لا تحتاج تسجيل دخول
 @app.route('/share/<room_id>')
 def share_view(room_id):
+    """صفحة المشاركة العامة - متاحة للجميع"""
     room = Room.query.filter_by(room_id=room_id, is_active=True).first()
-    return render_template('index.html', room_id=room_id)
+    if not room:
+        return render_template('index.html', error='رابط المشاركة غير صالح')
+    
+    if room.is_expired():
+        room.is_active = False
+        db.session.commit()
+        return render_template('index.html', error='انتهت صلاحية رابط المشاركة')
+    
+    return render_template('index.html', room_id=room_id, is_guest=True)
 
 @app.route('/health')
 def health_check():
@@ -919,6 +942,41 @@ def health_check():
         'version': '3.0.0',
         'uptime': round(time.time() - app.start_time, 2)
     })
+
+# ====== API عامة للمشاركة (بدون JWT) ======
+@app.route('/api/share/<room_id>/location', methods=['GET'])
+def get_shared_location(room_id):
+    """✅ جلب موقع المشاركة - لا يحتاج تسجيل دخول"""
+    print(f'📍 طلب موقع المشاركة: {room_id}')
+    
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+    if not room:
+        return jsonify({'error': 'رابط غير صالح'}), 404
+    
+    if room.is_expired():
+        room.is_active = False
+        db.session.commit()
+        return jsonify({'error': 'انتهت الصلاحية'}), 410
+    
+    current_location = CurrentLocation.query.filter_by(user_id=room.creator_id).first()
+    user = User.query.get(room.creator_id)
+    
+    if current_location and user:
+        print(f'✅ إرسال موقع {user.name}')
+        return jsonify({
+            'status': 'success',
+            'location': {
+                'lat': current_location.lat,
+                'lng': current_location.lng,
+                'speed': current_location.speed,
+                'heading': current_location.heading,
+                'name': user.name,
+                'updated_at': current_location.updated_at.isoformat() if current_location.updated_at else None
+            }
+        })
+    
+    print(f'⚠️ لا يوجد موقع حالي')
+    return jsonify({'status': 'no_data', 'message': 'لا يوجد موقع حالي'})
 
 # ====== API المصادقة ======
 @app.route('/api/auth/register', methods=['POST'])
@@ -1282,6 +1340,7 @@ def update_location():
                     broadcast_data,
                     room=f'share_{room.room_id}'
                 )
+                print(f'📡 بث الموقع إلى غرفة المشاركة: {room.room_id}')
         
         return jsonify({
             'status': 'success',
@@ -1895,7 +1954,6 @@ def service_worker():
     sw_code = """
 const CACHE_NAME = 'geolegend-v6';
 
-// INSTALL - تخزين أولي للصفحة الرئيسية
 self.addEventListener('install', (event) => {
     self.skipWaiting();
     event.waitUntil(
@@ -1908,7 +1966,6 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// ACTIVATE
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         Promise.all([
@@ -1929,17 +1986,14 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// FETCH
 self.addEventListener('fetch', (event) => {
 
     if (event.request.method !== 'GET') return;
 
-    // تجاهل API
     if (event.request.url.includes('/api/')) {
         return;
     }
 
-    // تجاهل الطلبات الخارجية
     const url = new URL(event.request.url);
 
     if (url.origin !== location.origin) {
@@ -1952,12 +2006,10 @@ self.addEventListener('fetch', (event) => {
 
             .then((response) => {
 
-                // تجاهل الردود غير الناجحة
                 if (!response || response.status !== 200) {
                     return response;
                 }
 
-                // تخزين فقط أنواع محددة
                 const contentType = response.headers.get('content-type');
 
                 if (
@@ -1981,14 +2033,12 @@ self.addEventListener('fetch', (event) => {
 
             .catch(async () => {
 
-                // fallback من الكاش
                 const cachedResponse = await caches.match(event.request);
 
                 if (cachedResponse) {
                     return cachedResponse;
                 }
 
-                // fallback نهائي للصفحة الرئيسية
                 return caches.match('/');
 
             })
@@ -2078,7 +2128,7 @@ if __name__ == '__main__':
     ║  ✅ AI Analysis       ✅ Friends           ║
     ║  ✅ Trips             ✅ Groups            ║
     ║  ✅ SOS Alerts        ✅ Notifications     ║
-    ║  ✅ Share Location    ✅ Real-time Updates ║
+    ║  ✅ Share Location    ✅ Guest Access      ║
     ║  ✅ Rate Limiting     ✅ Brute Force Prot  ║
     ║  ✅ Caching           ✅ Logging           ║
     ╚══════════════════════════════════════════════╝
