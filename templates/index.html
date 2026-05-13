@@ -610,6 +610,39 @@
 		    var lat = parseFloat(data.lat);
 		    var lng = parseFloat(data.lng);
 		    var name = data.name || 'مستخدم';
+		    var speed = parseFloat(data.speed) || 0;
+		    var heading = parseFloat(data.heading) || 0;
+		    var accuracy = parseFloat(data.accuracy) || 0;
+		    var isOnline = data.is_online !== false;
+		    var secondsAgo = parseInt(data.seconds_ago) || 0;
+		    
+		    // ✅ تحديث لوحة المعلومات العلوية للمشاهد
+		    if (isGuest || isShareViewer) {
+		        var sp = document.getElementById('speedDisplay');
+		        var hd = document.getElementById('headingDisplay');
+		        var ac = document.getElementById('accuracyDisplay');
+		        var statusEl = document.getElementById('trackingStatus');
+		        var dotEl = document.getElementById('statusDot');
+		        
+		        if (sp) sp.textContent = speed.toFixed(1);
+		        if (hd) hd.textContent = Math.round(heading);
+		        if (ac) ac.textContent = accuracy ? Math.round(accuracy) : '--';
+		        
+		        if (statusEl) {
+		            if (isOnline) {
+		                statusEl.textContent = '📡 ' + name + ' - مباشر';
+		                statusEl.style.color = '#00ff88';
+		            } else {
+		                var agoText = secondsAgo < 60 ? secondsAgo + ' ثانية' : Math.floor(secondsAgo / 60) + ' دقيقة';
+		                statusEl.textContent = '⏰ ' + name + ' - آخر ظهور منذ ' + agoText;
+		                statusEl.style.color = '#ffaa00';
+		            }
+		        }
+		        
+		        if (dotEl) {
+		            dotEl.style.color = isOnline ? '#00ff88' : '#ffaa00';
+		        }
+		    }
 		    
 		    // ✅ دعم Cesium 3D
 		    if (cesiumViewer && use3D) {
