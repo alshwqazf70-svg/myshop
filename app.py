@@ -843,8 +843,9 @@ def handle_join_share(data):
     room_id = data.get('room_id')
     if room_id:
         join_room(f'share_{room_id}')
-        app.logger.info(f'User joined share room: {room_id}')
+        print(f'🔗 مستخدم انضم إلى غرفة المشاركة: {room_id}')
         
+        # ✅ إرسال الموقع الحالي فوراً
         room = Room.query.filter_by(room_id=room_id, is_active=True).first()
         if room:
             current_location = CurrentLocation.query.filter_by(user_id=room.creator_id).first()
@@ -859,6 +860,9 @@ def handle_join_share(data):
                     'name': user.name,
                     'timestamp': datetime.now(timezone.utc).isoformat()
                 }, room=f'share_{room_id}')
+                print(f'✅ تم إرسال موقع {user.name} إلى غرفة {room_id}')
+            else:
+                print(f'⚠️ لا يوجد موقع حالي للمستخدم {room.creator_id}')
 
 @socketio.on('ping_server')
 def handle_ping():
