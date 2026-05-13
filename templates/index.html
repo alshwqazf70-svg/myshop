@@ -1082,67 +1082,93 @@
 
         // ==================== تهيئة SocketIO ====================
         function initSocketIO() {
-            try {
-                socket = io.connect(window.location.origin, {
-                    transports: ['websocket', 'polling'],
-                    reconnection: true,
-                    reconnectionAttempts: 10,
-                    reconnectionDelay: 1000
-                });
-
-                socket.on('connect', function() {
-                    console.log('🔗 SocketIO متصل');
-                    
-                    // الانضمام التلقائي إذا كان رابط مشاركة
-                    if (sharedRoomId) {
-                        socket.emit('join_share_room', { room_id: sharedRoomId });
-                        console.log('📡 انضم تلقائياً إلى غرفة المشاركة: ' + sharedRoomId);
-                    }
-                });
-
-                socket.on('location_update', function(data) {
-                    console.log('📍 استقبال موقع:', data);
-                    if (data.user_id === currentUserId) return;
-                    updateOtherUserMarker(data);
-                });
-
-                socket.on('family_location_update', function(data) {
-                    updateOtherUserMarker(data);
-                });
-
-                socket.on('sos_alert', function(data) {
-                    showNotification('🚨 SOS!', 'إشارة طوارئ من مستخدم ' + data.user_id, 'error');
-                    if (cesiumViewer && use3D) {
-                        cesiumViewer.entities.add({
-                            position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 200),
-                            billboard: {
-                                image: createSOSMarkerImage(),
-                                scale: 0.5,
-                                verticalOrigin: Cesium.VerticalOrigin.BOTTOM
-                            },
-                            label: {
-                                text: '🚨 SOS!\n' + (data.message || ''),
-                                font: '12px Cairo',
-                                fillColor: Cesium.Color.RED,
-                                outlineColor: Cesium.Color.BLACK,
-                                outlineWidth: 2,
-                                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                                verticalOrigin: Cesium.VerticalOrigin.TOP,
-                                pixelOffset: new Cesium.Cartesian2(0, 20)
-                            }
-                        });
-                    }
-                });
-
-                socket.on('new_notification', function(data) {
-                    showNotification(data.title, data.message, data.type);
-                });
-
-            } catch (error) {
-                console.warn('⚠️ SocketIO غير متاح');
-            }
-        }
-
+		    try {
+		        // ✅ اتصال محسّن مع تشخيص للأخطاء
+		        socket = io.connect(window.location.origin, {
+		            transports: ['polling', 'websocket'],
+		            reconnection: true,
+		            reconnectionAttempts: Infinity,
+		            reconnectionDelay: 1000,
+		            reconnectionDelayMax: 5000,
+		            timeout: 20000,
+		            forceNew: true
+		        });
+		
+		        socket.on('connect', function() {
+		            console.log('🔗 SocketIO متصل بنجاح');
+		            
+		            // ✅ الانضمام التلقائي إذا كان رابط مشاركة
+		            if (sharedRoomId) {
+		                socket.emit('join_share_room', { room_id: sharedRoomId });
+		                console.log('📡 انضم تلقائياً إلى غرفة المشاركة: ' + sharedRoomId);
+		                showNotification('✅', 'تم الاتصال بالخادم - جاري تحميل الموقع...', 'success');
+		            }
+		        });
+		
+		        // ✅ تشخيص أخطاء الاتصال
+		        socket.on('connect_error', function(error) {
+		            console.error('❌ خطأ اتصال SocketIO:', error);
+		            showNotification('❌', 'فشل الاتصال بالخادم', 'error');
+		        });
+		
+		        socket.on('disconnect', function(reason) {
+		            console.warn('⚠️ انقطع اتصال SocketIO:', reason);
+		            if (reason === 'io server disconnect') {
+		                socket.connect();
+		            }
+		        });
+		
+		        socket.on('reconnect', function(attemptNumber) {
+		            console.log('🔄 إعادة اتصال SocketIO بعد ' + attemptNumber + ' محاولات');
+		        });
+		
+		        socket.on('reconnect_error', function(error) {
+		            console.error('❌ فشل إعادة اتصال SocketIO:', error);
+		        });
+		
+		        socket.on('location_update', function(data) {
+		            console.log('📍 استقبال موقع:', data);
+		            if (data.user_id === currentUserId) return;
+		            updateOtherUserMarker(data);
+		        });
+		
+		        socket.on('family_location_update', function(data) {
+		            updateOtherUserMarker(data);
+		        });
+		
+		        socket.on('sos_alert', function(data) {
+		            showNotification('🚨 SOS!', 'إشارة طوارئ من مستخدم ' + data.user_id, 'error');
+		            if (cesiumViewer && use3D) {
+		                cesiumViewer.entities.add({
+		                    position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 200),
+		                    billboard: {
+		                        image: createSOSMarkerImage(),
+		                        scale: 0.5,
+		                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+		                    },
+		                    label: {
+		                        text: '🚨 SOS!\n' + (data.message || ''),
+		                        font: '12px Cairo',
+		                        fillColor: Cesium.Color.RED,
+		                        outlineColor: Cesium.Color.BLACK,
+		                        outlineWidth: 2,
+		                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+		                        verticalOrigin: Cesium.VerticalOrigin.TOP,
+		                        pixelOffset: new Cesium.Cartesian2(0, 20)
+		                    }
+		                });
+		            }
+		        });
+		
+		        socket.on('new_notification', function(data) {
+		            showNotification(data.title, data.message, data.type);
+		        });
+		
+		    } catch (error) {
+		        console.warn('⚠️ SocketIO غير متاح');
+		    }
+		}
+		
         function createSOSMarkerImage() {
             var canvas = document.createElement('canvas');
             canvas.width = 64;
