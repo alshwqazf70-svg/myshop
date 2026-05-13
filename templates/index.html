@@ -559,13 +559,14 @@
                 console.log('🟡 [DEBUG] initSocketIO - isGuest: ' + isGuest);
                 
                 socket = io.connect(window.location.origin, {
-                    transports: ['polling'],
-                    reconnection: true,
-                    reconnectionAttempts: Infinity,
-                    reconnectionDelay: 1000,
-                    reconnectionDelayMax: 5000,
-                    timeout: 20000
-                });
+			    transports: ['polling', 'websocket'],
+			    secure: true,
+			    reconnection: true,
+			    reconnectionAttempts: Infinity,
+			    reconnectionDelay: 1000,
+			    reconnectionDelayMax: 5000,
+			    timeout: 20000
+			});
 
                 socket.on('connect', function() {
                     console.log('🟢 [DEBUG] SocketIO متصل - isGuest: ' + isGuest);
