@@ -390,6 +390,41 @@
 
         .bottom-nav-btn .nav-icon { font-size: 22px; }
 
+        /* ✅ زر عرض الموقع المشترك */
+        .share-view-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .share-view-box {
+            background: rgba(20, 20, 50, 0.95);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.3);
+            animation: scaleIn 0.5s ease-out;
+        }
+
+        .share-view-box .icon-large {
+            font-size: 64px;
+            display: block;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
         .loading-screen {
             position: fixed;
             inset: 0;
@@ -507,6 +542,8 @@
             .modal-content { padding: 20px; }
             .notification { min-width: auto; max-width: 90vw; }
             .loader-spinner { width: 60px; height: 60px; }
+            .share-view-box { padding: 25px; }
+            .share-view-box .icon-large { font-size: 48px; }
         }
 
         @media (max-width: 480px) {
@@ -537,6 +574,21 @@
     <!-- حاويات الخريطة -->
     <div id="cesiumContainer"></div>
     <div id="leafletContainer"><div id="map"></div></div>
+
+    <!-- ✅ نافذة عرض الموقع المشترك -->
+    <div id="shareViewOverlay" class="share-view-overlay" style="display: none;">
+        <div class="share-view-box">
+            <span class="icon-large">📍</span>
+            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;">تمت مشاركة موقع معك</h2>
+            <p style="color: rgba(255,255,255,0.7); margin-bottom: 25px; font-size: 14px;">اضغط على الزر أدناه لعرض الموقع المشترك على الخريطة</p>
+            <button class="neon-btn" onclick="viewSharedLocation()" style="font-size: 16px; padding: 14px 30px; width: 100%;">
+                📍 عرض الموقع المشترك
+            </button>
+            <button class="glass-btn" onclick="closeShareView()" style="width: 100%; margin-top: 10px;">
+                ✕ إغلاق
+            </button>
+        </div>
+    </div>
 
     <!-- لوحة المعلومات العلوية -->
     <div class="info-panel" id="infoPanel">
@@ -770,6 +822,8 @@
         var lastBatteryCheck = 0;
         var navigationActive = false;
         var navigationTarget = null;
+        var sharedRoomId = null;
+        var isShareViewer = false;
 
         // ====== Cooldown System ======
         var cooldowns = {};
@@ -837,6 +891,7 @@
             restoreUserState();
             setupConnectionListeners();
             setupIdleDetection();
+            checkForShareLink();
 
             console.log('🌟 GeoLegend 3D - All Systems Ready');
             console.log('🏙️ Cesium 3D | 🧭 Navigation | 👨‍👩‍👧‍👦 Family | 🚨 SOS | 🤖 AI');
@@ -845,7 +900,6 @@
         // ==================== تهيئة Cesium 3D ====================
         function initCesiumMap() {
             try {
-                // ✅ استخدام مفتاح Cesium Ion الخاص بك
                 Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4MjU1YmMwOS03MWYwLTQ3NzItYjg4My1mM2VkNTEwMTUwODMiLCJpZCI6NDMwMjEyLCJzdWIiOiJNYWxlayIsImlzcyI6Imh0dHBzOi8vaW9uLmNlc2l1bS5jb20iLCJhdWQiOiJVbnRpdGxlZE1hbGVrIiwiaWF0IjoxNzc4NTIzMzYxfQ.NlGhCuwcHYQRsY04L84BAicL6kt_DewkVPsZTvcOe3w';
                 
                 Cesium.buildModuleUrl.setBaseUrl('https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/');
@@ -972,6 +1026,60 @@
             console.log('✅ Leaflet Map Ready');
         }
 
+        // ==================== نظام المشاركة ====================
+        function checkForShareLink() {
+            var path = window.location.pathname;
+            var shareMatch = path.match(/\/share\/(.+)/);
+            if (shareMatch && shareMatch[1]) {
+                sharedRoomId = shareMatch[1];
+                isShareViewer = true;
+                console.log('🔗 تم اكتشاف رابط مشاركة: ' + sharedRoomId);
+                
+                // إظهار نافذة عرض المشاركة بعد تحميل الصفحة
+                setTimeout(function() {
+                    var overlay = document.getElementById('shareViewOverlay');
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                    }
+                }, 1500);
+            }
+        }
+
+        function viewSharedLocation() {
+            if (!sharedRoomId) {
+                showNotification('❌', 'لا يوجد رابط مشاركة', 'error');
+                return;
+            }
+            
+            if (!socket || !socket.connected) {
+                showNotification('⏳', 'جارٍ الاتصال بالخادم... حاول مرة أخرى', 'warning');
+                return;
+            }
+            
+            // الانضمام إلى غرفة المشاركة
+            socket.emit('join_share_room', { room_id: sharedRoomId });
+            console.log('📡 طلب الانضمام إلى غرفة: ' + sharedRoomId);
+            showNotification('🔗', 'جارٍ البحث عن الموقع المشترك...', 'info');
+            
+            // إخفاء النافذة
+            closeShareView();
+            
+            // إخفاء علامة المستخدم الافتراضية
+            if (userEntity) {
+                userEntity.show = false;
+            }
+            
+            // تغيير العنوان
+            document.title = '🔗 GeoLegend - مشاركة مباشرة';
+        }
+
+        function closeShareView() {
+            var overlay = document.getElementById('shareViewOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+
         // ==================== تهيئة SocketIO ====================
         function initSocketIO() {
             try {
@@ -985,22 +1093,10 @@
                 socket.on('connect', function() {
                     console.log('🔗 SocketIO متصل');
                     
-                    // ✅ الانضمام التلقائي لغرفة المشاركة عند فتح رابط share
-                    var path = window.location.pathname;
-                    var shareMatch = path.match(/\/share\/(.+)/);
-                    if (shareMatch && shareMatch[1]) {
-                        var roomId = shareMatch[1];
-                        socket.emit('join_share_room', { room_id: roomId });
-                        console.log('📡 انضم إلى غرفة المشاركة: ' + roomId);
-                        showNotification('🔗', 'تم الانضمام إلى جلسة المشاركة - انتظر ظهور الموقع...', 'info');
-                        
-                        // إخفاء علامة المستخدم الافتراضية
-                        if (userEntity) {
-                            userEntity.show = false;
-                        }
-                        
-                        // تغيير عنوان الصفحة
-                        document.title = '🔗 GeoLegend - مشاركة مباشرة';
+                    // الانضمام التلقائي إذا كان رابط مشاركة
+                    if (sharedRoomId) {
+                        socket.emit('join_share_room', { room_id: sharedRoomId });
+                        console.log('📡 انضم تلقائياً إلى غرفة المشاركة: ' + sharedRoomId);
                     }
                 });
 
@@ -1068,7 +1164,6 @@
             return canvas.toDataURL();
         }
 
-        // ✅ دالة تحديث علامة المستخدم الآخر (للمشاركة)
         function updateOtherUserMarker(data) {
             if (!cesiumViewer || !use3D) return;
             
@@ -1076,10 +1171,8 @@
             var entity = cesiumViewer.entities.getById(key);
             
             if (entity) {
-                // تحديث موقع العلامة الموجودة
                 entity.position = Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50);
             } else {
-                // إنشاء علامة جديدة
                 var newEntity = cesiumViewer.entities.add({
                     id: key,
                     name: data.name || 'مستخدم مشارك',
@@ -1101,9 +1194,7 @@
                     }
                 });
                 
-                // تحريك الكاميرا إلى موقع المشارك
-                var path = window.location.pathname;
-                if (path.includes('/share/')) {
+                if (isShareViewer) {
                     cesiumViewer.camera.flyTo({
                         destination: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 800),
                         orientation: {
