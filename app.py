@@ -8,7 +8,6 @@ from flask_jwt_extended import (
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_talisman import Talisman
 from flask_caching import Cache
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, timezone
@@ -29,7 +28,6 @@ import sys
 # ====== إعدادات التطبيق ======
 app = Flask(__name__)
 
-# تحسين الأمان - استخدام مفاتيح عشوائية قوية
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', secrets.token_hex(32))
 
@@ -43,19 +41,16 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# إعدادات JWT
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 app.config['JWT_BLACKLIST_ENABLED'] = True
 app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access', 'refresh']
 app.config['JWT_IDENTITY_CLAIM'] = 'sub'
 
-# إعدادات الجلسة
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# تهيئة الملحقات
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
@@ -75,20 +70,18 @@ socketio = SocketIO(
     engineio_logger=False
 )
 
-# إضافة التخزين المؤقت
 cache = Cache(app, config={
     'CACHE_TYPE': 'simple',
     'CACHE_DEFAULT_TIMEOUT': 300
 })
 
-# إعداد سجل الأحداث (Logging)
 if not app.debug and not app.testing:
     if not os.path.exists('logs'):
         os.mkdir('logs')
     
     file_handler = RotatingFileHandler(
         'logs/geolegend.log',
-        maxBytes=10240 * 1024,  # 10MB
+        maxBytes=10240 * 1024,
         backupCount=10
     )
     file_handler.setFormatter(logging.Formatter(
@@ -97,7 +90,6 @@ if not app.debug and not app.testing:
     file_handler.setLevel(logging.INFO)
     app.logger.addHandler(file_handler)
     
-    # إضافة معالج الأخطاء الحرجة
     error_handler = RotatingFileHandler(
         'logs/errors.log',
         maxBytes=10240 * 1024,
@@ -112,23 +104,19 @@ if not app.debug and not app.testing:
     app.logger.setLevel(logging.INFO)
     app.logger.info('GeoLegend Ultimate startup')
 
-# وقت بدء التشغيل للمراقبة
 app.start_time = time.time()
 
-# ====== طباعة معلومات التشخيص ======
 print(f"Python version: {sys.version}")
 print(f"Starting GeoLegend Ultimate...")
-print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
-# ====== حماية ضد هجمات القوة العمياء (Brute Force) ======
+# ====== حماية Brute Force ======
 class BruteForceProtection:
     def __init__(self):
         self.attempts = defaultdict(list)
         self.max_attempts = int(os.getenv('MAX_LOGIN_ATTEMPTS', 5))
-        self.window = int(os.getenv('LOGIN_WINDOW_SECONDS', 300))  # 5 دقائق
+        self.window = int(os.getenv('LOGIN_WINDOW_SECONDS', 300))
     
     def check_ip(self, ip):
-        """التحقق من عدم تجاوز الحد المسموح"""
         now = datetime.now(timezone.utc)
         self.attempts[ip] = [
             t for t in self.attempts[ip] 
@@ -144,36 +132,29 @@ class BruteForceProtection:
         return True, 0
     
     def reset_ip(self, ip):
-        """إعادة تعيين عداد المحاولات"""
         self.attempts[ip] = []
 
 brute_force = BruteForceProtection()
 
 # ====== دوال المساعدة ======
 def haversine(lat1, lng1, lat2, lng2):
-    """حساب المسافة بين نقطتين بالكيلومتر بدقة محسنة"""
     try:
-        # التحقق من صحة المدخلات
         if not all(isinstance(x, (int, float)) for x in [lat1, lng1, lat2, lng2]):
             return 0.0
         
         lat1, lng1, lat2, lng2 = map(radians, [float(lat1), float(lng1), float(lat2), float(lng2)])
         dlat, dlng = lat2 - lat1, lng2 - lng1
         
-        # استخدام معادلة haversine المحسنة
         a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlng/2)**2
-        
-        # ضمان عدم تجاوز القيمة عن 1 بسبب أخطاء التقريب
         a = min(1.0, max(0.0, a))
         c = 2 * asin(sqrt(a))
         
-        return 6371 * c  # نصف قطر الأرض بالكيلومتر
+        return 6371 * c
     except Exception as e:
         app.logger.error(f'Error in haversine: {str(e)}')
         return 0.0
 
 def bearing(lat1, lng1, lat2, lng2):
-    """حساب الاتجاه بين نقطتين"""
     try:
         lat1, lng1, lat2, lng2 = map(radians, [float(lat1), float(lng1), float(lat2), float(lng2)])
         dlng = lng2 - lng1
@@ -186,14 +167,12 @@ def bearing(lat1, lng1, lat2, lng2):
         return 0.0
 
 def calculate_speed(pos1, pos2):
-    """حساب السرعة من موقعين"""
     if not pos1 or not pos2:
         return 0
     
     try:
         dist = haversine(pos1['lat'], pos1['lng'], pos2['lat'], pos2['lng'])
         
-        # التحقق من وجود timestamp
         if hasattr(pos1['timestamp'], 'timestamp'):
             time1 = pos1['timestamp'].timestamp()
         else:
@@ -211,7 +190,6 @@ def calculate_speed(pos1, pos2):
         return 0
 
 def analyze_movement(locations):
-    """تحليل نمط الحركة AI مع تحسينات"""
     if len(locations) < 5:
         return {'pattern': 'غير كاف', 'confidence': 0}
     
@@ -226,8 +204,7 @@ def analyze_movement(locations):
             total_dist += dist
             spd = calculate_speed(loc1, loc2)
             
-            # تصفية السرعات غير المعقولة
-            if spd < 200:  # تجاهل السرعات التي تتجاوز 200 كم/س
+            if spd < 200:
                 speeds.append(spd)
                 
                 if spd < 2:
@@ -245,16 +222,13 @@ def analyze_movement(locations):
         avg_speed = statistics.mean(speeds) if speeds else 0
         max_speed = max(speeds) if speeds else 0
         
-        # كشف الحوادث المحتملة مع تحسين الدقة
         accident_detected = False
         if len(speeds) >= 3:
             for i in range(len(speeds)-1):
                 if speeds[i] > 30 and speeds[i+1] < 3:
                     accident_detected = True
-                    app.logger.warning(f'Potential accident detected: speed dropped from {speeds[i]} to {speeds[i+1]}')
                     break
         
-        # تحسين حساب الثقة
         confidence = round(patterns[dominant] / len(locations) * 100, 1) if len(locations) > 0 else 0
         
         return {
@@ -271,15 +245,13 @@ def analyze_movement(locations):
         return {'pattern': 'خطأ', 'confidence': 0}
 
 def detect_geofence_events(user_id, lat, lng):
-    """كشف دخول/خروج مناطق الأمان وإرسال إشعارات مع تحسينات"""
     try:
         geofences = Geofence.query.filter_by(user_id=user_id, is_active=True).all()
         events = []
         
         for geo in geofences:
-            distance = haversine(lat, lng, geo.lat, geo.lng) * 1000  # تحويل إلى متر
+            distance = haversine(lat, lng, geo.lat, geo.lng) * 1000
             
-            # استخدام التخزين المؤقت للحالة الأخيرة
             cache_key = f'geofence_last_event_{geo.id}'
             last_event_data = cache.get(cache_key)
             
@@ -298,7 +270,6 @@ def detect_geofence_events(user_id, lat, lng):
             was_inside = last_event_data['entering']
             
             if currently_inside and not was_inside:
-                # دخل المنطقة
                 event = GeofenceEvent(
                     geofence_id=geo.id,
                     user_id=user_id,
@@ -309,10 +280,8 @@ def detect_geofence_events(user_id, lat, lng):
                 db.session.add(event)
                 events.append({'type': 'enter', 'geofence': geo.name, 'distance': round(distance, 1)})
                 
-                # تحديث التخزين المؤقت
                 cache.set(cache_key, {'entering': True, 'timestamp': datetime.now(timezone.utc).isoformat()}, timeout=300)
                 
-                # إشعار
                 create_notification(
                     user_id,
                     f'📍 {geo.name}',
@@ -320,7 +289,6 @@ def detect_geofence_events(user_id, lat, lng):
                     'geofence_enter'
                 )
                 
-                # إشعار أفراد العائلة
                 user = User.query.get(user_id)
                 if user:
                     notify_family_members(
@@ -329,7 +297,6 @@ def detect_geofence_events(user_id, lat, lng):
                     )
                     
             elif not currently_inside and was_inside:
-                # خرج من المنطقة
                 event = GeofenceEvent(
                     geofence_id=geo.id,
                     user_id=user_id,
@@ -340,10 +307,8 @@ def detect_geofence_events(user_id, lat, lng):
                 db.session.add(event)
                 events.append({'type': 'exit', 'geofence': geo.name, 'distance': round(distance, 1)})
                 
-                # تحديث التخزين المؤقت
                 cache.set(cache_key, {'entering': False, 'timestamp': datetime.now(timezone.utc).isoformat()}, timeout=300)
                 
-                # إشعار
                 create_notification(
                     user_id,
                     f'📍 {geo.name}',
@@ -351,7 +316,6 @@ def detect_geofence_events(user_id, lat, lng):
                     'geofence_exit'
                 )
                 
-                # إشعار أفراد العائلة
                 user = User.query.get(user_id)
                 if user:
                     notify_family_members(
@@ -365,7 +329,6 @@ def detect_geofence_events(user_id, lat, lng):
         return []
 
 def notify_family_members(user_id, message):
-    """إرسال إشعار لأفراد العائلة مع معالجة أفضل للأخطاء"""
     try:
         families = FamilyMember.query.filter_by(user_id=user_id).all()
         for fam in families:
@@ -379,7 +342,6 @@ def notify_family_members(user_id, message):
                         'family'
                     )
                     
-                    # بث الإشعار عبر SocketIO بشكل فوري
                     socketio.emit('new_notification', {
                         'title': '👨‍👩‍👧‍👦 العائلة',
                         'message': message,
@@ -389,13 +351,10 @@ def notify_family_members(user_id, message):
         app.logger.error(f'Error in notify_family_members: {str(e)}')
 
 def create_notification(user_id, title, message, n_type='info', data=None):
-    """إنشاء إشعار ذكي مع تحسينات"""
     try:
-        # التحقق من صحة المدخلات
         if not user_id or not title or not message:
             return None
         
-        # تنظيف البيانات
         title = sanitize_input(title)[:200]
         message = sanitize_input(message)[:500]
         n_type = sanitize_input(n_type).lower()[:50]
@@ -410,7 +369,6 @@ def create_notification(user_id, title, message, n_type='info', data=None):
         db.session.add(notif)
         db.session.commit()
         
-        # بث الإشعار عبر SocketIO
         notification_dict = notif.to_dict()
         socketio.emit('new_notification', notification_dict, room=f'user_{user_id}')
         
@@ -420,7 +378,7 @@ def create_notification(user_id, title, message, n_type='info', data=None):
         app.logger.error(f'Error in create_notification: {str(e)}')
         return None
 
-# ====== نماذج قاعدة البيانات مع تحسينات ======
+# ====== نماذج قاعدة البيانات ======
 class User(db.Model):
     __tablename__ = 'users'
     __table_args__ = (
@@ -437,7 +395,6 @@ class User(db.Model):
     last_login = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
-    # العلاقات
     current_location = db.relationship('CurrentLocation', backref='user', uselist=False, cascade='all, delete-orphan')
     location_history = db.relationship('LocationHistory', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     rooms = db.relationship('Room', backref='creator', lazy=True, foreign_keys='Room.creator_id')
@@ -547,7 +504,6 @@ class Room(db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     def is_expired(self):
-        """التحقق من انتهاء صلاحية الغرفة"""
         if not self.expiry:
             return False
         return datetime.now(timezone.utc) > self.expiry
@@ -570,7 +526,6 @@ class SOSAlert(db.Model):
     resolved_at = db.Column(db.DateTime, nullable=True)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     
-    # العلاقات
     user = db.relationship('User', foreign_keys=[user_id], backref='sos_alerts')
     responder = db.relationship('User', foreign_keys=[responder_id], backref='responded_sos')
 
@@ -584,11 +539,10 @@ class Friendship(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     requester_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     addressee_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    status = db.Column(db.String(20), default='pending', index=True)  # pending, accepted, rejected, blocked
+    status = db.Column(db.String(20), default='pending', index=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
-    # العلاقات
     requester = db.relationship('User', foreign_keys=[requester_id], backref='sent_requests')
     addressee = db.relationship('User', foreign_keys=[addressee_id], backref='received_requests')
 
@@ -603,7 +557,6 @@ class Group(db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
     
-    # العلاقات
     creator = db.relationship('User', backref='created_groups')
     members = db.relationship('GroupMember', backref='group', lazy=True, cascade='all, delete-orphan')
 
@@ -616,11 +569,9 @@ class GroupMember(db.Model):
     role = db.Column(db.String(20), default='member')
     joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
-    # العلاقات
     user = db.relationship('User', backref='group_memberships')
 
 class Family(db.Model):
-    """نظام العائلة"""
     __tablename__ = 'families'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -632,7 +583,6 @@ class Family(db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True)
     
-    # العلاقات
     creator = db.relationship('User', backref='created_families')
     members = db.relationship('FamilyMember', backref='family', lazy=True, cascade='all, delete-orphan')
 
@@ -716,7 +666,6 @@ class Geofence(db.Model):
         }
 
 class GeofenceEvent(db.Model):
-    """سجل أحداث مناطق الأمان"""
     __tablename__ = 'geofence_events'
     __table_args__ = (
         db.Index('idx_geofence_event_time', 'timestamp'),
@@ -778,27 +727,25 @@ class AnalyticsSnapshot(db.Model):
     sos_count = db.Column(db.Integer, default=0)
     geofence_events_count = db.Column(db.Integer, default=0)
 
-# ====== JWT Blocklist محسن ======
+# ====== JWT Blocklist ======
 @jwt.token_in_blocklist_loader
 def check_if_token_in_blocklist(jwt_header, jwt_payload):
     try:
         jti = jwt_payload['jti']
         
-        # التحقق من التخزين المؤقت أولاً
         cache_key = f'blocked_token_{jti}'
         if cache.get(cache_key):
             return True
         
-        # التحقق من قاعدة البيانات
         token = db.session.query(TokenBlocklist.id).filter_by(jti=jti).first()
         if token:
-            cache.set(cache_key, True, timeout=3600)  # تخزين لمدة ساعة
+            cache.set(cache_key, True, timeout=3600)
             return True
         
         return False
     except Exception as e:
         app.logger.error(f'Error checking token blocklist: {str(e)}')
-        return True  # رفض التوكن في حالة الخطأ للأمان
+        return True
 
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_payload):
@@ -823,13 +770,11 @@ def missing_token_callback(error):
 
 # ====== دوال التحقق ======
 def is_valid_email(email):
-    """التحقق من صحة البريد الإلكتروني"""
     if not email:
         return False
     return re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email) is not None
 
 def is_valid_coordinates(lat, lng):
-    """التحقق من صحة الإحداثيات"""
     try:
         lat_float = float(lat)
         lng_float = float(lng)
@@ -838,44 +783,23 @@ def is_valid_coordinates(lat, lng):
         return False
 
 def sanitize_input(text):
-    """تنظيف المدخلات من المحتوى الضار"""
     if not text:
         return ''
-    # إزالة HTML tags
     text = re.sub(r'<[^>]*>', '', text)
-    # إزالة الأحرف الخاصة الخطيرة
     text = re.sub(r'[<>{}]', '', text)
-    # قص النص للطول المسموح
     return text.strip()[:1000]
 
 def sanitize_email(email):
-    """تنظيف البريد الإلكتروني"""
     if not email:
         return ''
     return email.lower().strip()[:120]
 
-def calculate_distance_matrix(points):
-    """حساب مصفوفة المسافات بين مجموعة نقاط"""
-    n = len(points)
-    matrix = [[0] * n for _ in range(n)]
-    for i in range(n):
-        for j in range(i + 1, n):
-            dist = haversine(
-                points[i]['lat'], points[i]['lng'],
-                points[j]['lat'], points[j]['lng']
-            )
-            matrix[i][j] = round(dist, 2)
-            matrix[j][i] = round(dist, 2)
-    return matrix
-
-# ====== SocketIO Events محسن ======
+# ====== SocketIO Events ======
 @socketio.on('connect')
 def handle_connect():
-    """معالجة اتصال SocketIO مع المصادقة"""
     try:
         token = request.args.get('token')
         if token:
-            # التحقق من JWT token
             from flask_jwt_extended import decode_token
             decoded = decode_token(token)
             user_id = decoded.get('sub')
@@ -887,7 +811,6 @@ def handle_connect():
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """معالجة قطع الاتصال"""
     pass
 
 @socketio.on('join_tracking')
@@ -895,7 +818,6 @@ def handle_join_tracking(data):
     user_id = data.get('user_id')
     if user_id:
         join_room(f'user_{user_id}')
-        app.logger.info(f'User {user_id} joined tracking room')
 
 @socketio.on('leave_tracking')
 def handle_leave_tracking(data):
@@ -923,7 +845,6 @@ def handle_join_share(data):
         join_room(f'share_{room_id}')
         app.logger.info(f'User joined share room: {room_id}')
         
-        # إرسال الموقع الحالي للمنشئ إذا كان موجوداً
         room = Room.query.filter_by(room_id=room_id, is_active=True).first()
         if room:
             current_location = CurrentLocation.query.filter_by(user_id=room.creator_id).first()
@@ -941,17 +862,13 @@ def handle_join_share(data):
 
 @socketio.on('ping_server')
 def handle_ping():
-    """للحفاظ على الاتصال نشطاً"""
     emit('pong_server', {'timestamp': datetime.now(timezone.utc).isoformat()})
 
 # ====== Middleware ======
 @app.before_request
 def before_request():
-    """تنفيذ قبل كل طلب"""
-    # تسجيل وقت بدء الطلب
     request.start_time = time.time()
     
-    # التحقق من User-Agent
     user_agent = request.headers.get('User-Agent', '')
     if not user_agent:
         app.logger.warning(f'Request without User-Agent from {request.remote_addr}')
@@ -959,17 +876,13 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    """تنفيذ بعد كل طلب"""
-    # إضافة headers أمان
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     
-    # إزالة headers حساسة
     response.headers.pop('Server', None)
     
-    # تسجيل وقت الاستجابة
     if hasattr(request, 'start_time'):
         elapsed = time.time() - request.start_time
         if request.path.startswith('/api/'):
@@ -979,38 +892,23 @@ def after_request(response):
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    """إغلاق الجلسة بشكل آمن"""
     if exception:
         db.session.rollback()
     db.session.remove()
 
 # ====== الصفحات الأمامية ======
 @app.route('/')
-@cache.cached(timeout=300)  # تخزين مؤقت للصفحة الرئيسية
+@cache.cached(timeout=300)
 def index():
     return render_template('index.html')
 
 @app.route('/share/<room_id>')
 def share_view(room_id):
-    """عرض صفحة المشاركة مع بيانات الغرفة"""
     room = Room.query.filter_by(room_id=room_id, is_active=True).first()
-    if not room:
-        return render_template('index.html', error='رابط المشاركة غير صالح أو منتهي')
-    
-    if room.is_expired():
-        room.is_active = False
-        db.session.commit()
-        return render_template('index.html', error='انتهت صلاحية رابط المشاركة')
-    
-    creator = User.query.get(room.creator_id)
-    
-    return render_template('index.html', 
-                         room_id=room_id,
-                         creator_name=creator.name if creator else 'مستخدم')
+    return render_template('index.html', room_id=room_id)
 
 @app.route('/health')
 def health_check():
-    """فحص صحة التطبيق"""
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -1018,7 +916,7 @@ def health_check():
         'uptime': round(time.time() - app.start_time, 2)
     })
 
-# ====== API المصادقة محسن ======
+# ====== API المصادقة ======
 @app.route('/api/auth/register', methods=['POST'])
 @limiter.limit("10 per minute")
 def register():
@@ -1034,7 +932,6 @@ def register():
         email = sanitize_email(data.get('email', ''))
         password = data.get('password', '')
         
-        # التحقق من المدخلات
         errors = []
         if not name or len(name) < 2:
             errors.append('الاسم يجب أن يكون حرفين على الأقل')
@@ -1046,11 +943,9 @@ def register():
         if errors:
             return jsonify({'error': '. '.join(errors)}), 400
         
-        # التحقق من عدم وجود المستخدم
         if User.query.filter_by(email=email).first():
             return jsonify({'error': 'البريد الإلكتروني مستخدم بالفعل'}), 409
         
-        # إنشاء المستخدم
         user = User(
             name=name,
             email=email,
@@ -1060,7 +955,6 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # إنشاء التوكنات
         access_token = create_access_token(
             identity=str(user.id),
             additional_claims={'name': user.name, 'email': user.email}
@@ -1085,11 +979,9 @@ def register():
 @limiter.limit("20 per minute")
 def login():
     try:
-        # التحقق من القوة العمياء
         ip = request.remote_addr
         allowed, remaining = brute_force.check_ip(ip)
         if not allowed:
-            app.logger.warning(f'Brute force blocked for IP: {ip}')
             return jsonify({
                 'error': f'محاولات كثيرة جداً. حاول مرة أخرى بعد {remaining} ثانية',
                 'retry_after': remaining
@@ -1108,31 +1000,25 @@ def login():
         if not email or not password:
             return jsonify({'error': 'جميع الحقول مطلوبة'}), 400
         
-        # البحث عن المستخدم
         user = User.query.filter_by(email=email).first()
         if not user:
-            app.logger.warning(f'Login attempt for non-existent email: {email}')
             return jsonify({'error': 'بيانات الدخول غير صحيحة'}), 401
         
         if not user.password_hash or not check_password_hash(user.password_hash, password):
-            app.logger.warning(f'Failed login attempt for: {email}')
             return jsonify({'error': 'بيانات الدخول غير صحيحة'}), 401
         
         if not user.is_active:
             return jsonify({'error': 'الحساب معطل. الرجاء التواصل مع الدعم'}), 403
         
-        # تحديث آخر دخول
         user.last_login = datetime.now(timezone.utc)
         db.session.commit()
         
-        # إنشاء التوكنات
         access_token = create_access_token(
             identity=str(user.id),
             additional_claims={'name': user.name, 'email': user.email}
         )
         refresh_token = create_refresh_token(identity=str(user.id))
         
-        # إعادة تعيين عداد المحاولات الخاطئة
         brute_force.reset_ip(ip)
         
         app.logger.info(f'User logged in: {email}')
@@ -1176,7 +1062,6 @@ def logout():
         jti = get_jwt()['jti']
         user_id = int(get_jwt_identity())
         
-        # إضافة التوكن للقائمة السوداء
         now = datetime.now(timezone.utc)
         token_block = TokenBlocklist(
             jti=jti,
@@ -1188,7 +1073,6 @@ def logout():
         db.session.add(token_block)
         db.session.commit()
         
-        # مسح التخزين المؤقت
         cache.delete(f'blocked_token_{jti}')
         
         app.logger.info(f'User {user_id} logged out')
@@ -1202,7 +1086,7 @@ def logout():
         app.logger.error(f'Logout error: {str(e)}')
         return jsonify({'error': 'حدث خطأ أثناء تسجيل الخروج'}), 500
 
-# ====== API الموقع محسن ======
+# ====== API الموقع ======
 @app.route('/api/location/update', methods=['POST'])
 @jwt_required()
 @limiter.limit("300 per minute")
@@ -1225,22 +1109,16 @@ def update_location():
         battery_level = data.get('battery_level', 100)
         device_type = data.get('device_type', 'unknown')
         
-        # التحقق من الإحداثيات
         if lat is None or lng is None:
             return jsonify({'error': 'الإحداثيات مطلوبة'}), 400
         
         if not is_valid_coordinates(lat, lng):
             return jsonify({'error': 'إحداثيات غير صالحة'}), 400
         
-        # التحقق من السرعة المعقولة
         if float(speed) > 200:
-            app.logger.warning(f'Unrealistic speed {speed} from user {user_id}')
-            speed = 200  # تحديد السرعة القصوى
+            speed = 200
         
         now = datetime.now(timezone.utc)
-        
-        # تحديث الموقع الحالي مع التخزين المؤقت
-        cache_key = f'user_location_{user_id}'
         
         current_loc = CurrentLocation.query.filter_by(user_id=user_id).first()
         if current_loc:
@@ -1266,10 +1144,9 @@ def update_location():
             )
             db.session.add(current_loc)
         
-        # تحديث التخزين المؤقت
+        cache_key = f'user_location_{user_id}'
         cache.set(cache_key, current_loc.to_dict(), timeout=30)
         
-        # حفظ في السجل (مع تحسين التحقق من التكرار)
         should_save = True
         last_history = LocationHistory.query.filter_by(user_id=user_id)\
             .order_by(LocationHistory.timestamp.desc()).first()
@@ -1277,8 +1154,6 @@ def update_location():
         if last_history:
             time_diff = (now - last_history.timestamp).total_seconds()
             distance = haversine(last_history.lat, last_history.lng, float(lat), float(lng))
-            
-            # حفظ إذا مر وقت كافٍ أو تغير الموقع بشكل كبير
             should_save = time_diff >= 30 or distance > 0.01
         
         if should_save:
@@ -1294,7 +1169,6 @@ def update_location():
             )
             db.session.add(history)
         
-        # تحديث الرحلة النشطة
         active_trip = Trip.query.filter_by(user_id=user_id, is_active=True).first()
         if active_trip:
             recent = LocationHistory.query.filter_by(user_id=user_id)\
@@ -1319,10 +1193,8 @@ def update_location():
                     (now - active_trip.started_at).total_seconds() / 60, 1
                 )
         
-        # التحقق من Geofencing
         geofence_events = detect_geofence_events(user_id, float(lat), float(lng))
         
-        # تحديث الإحصائيات اليومية
         today = now.date()
         snapshot = AnalyticsSnapshot.query.filter_by(user_id=user_id, date=today).first()
         if snapshot:
@@ -1334,7 +1206,6 @@ def update_location():
                 locations_count=1
             ))
         
-        # كشف الحوادث AI مع تحسين الدقة
         recent_locs = LocationHistory.query.filter_by(user_id=user_id)\
             .order_by(LocationHistory.timestamp.desc()).limit(15).all()
         
@@ -1350,7 +1221,6 @@ def update_location():
             analysis = analyze_movement(locs_dict)
             
             if analysis.get('accident_detected'):
-                # التحقق من عدم وجود تنبيه حديث لتجنب التكرار
                 recent_alert = Notification.query.filter_by(
                     user_id=user_id,
                     type='accident_alert'
@@ -1366,7 +1236,6 @@ def update_location():
                         'accident_alert'
                     )
                     
-                    # إشعار العائلة
                     user = User.query.get(user_id)
                     if user:
                         notify_family_members(
@@ -1376,7 +1245,6 @@ def update_location():
         
         db.session.commit()
         
-        # تجهيز بيانات البث
         user = User.query.get(user_id)
         broadcast_data = {
             'user_id': user_id,
@@ -1391,10 +1259,8 @@ def update_location():
             'timestamp': now.isoformat()
         }
         
-        # بث الموقع للغرفة الشخصية
         socketio.emit('location_update', broadcast_data, room=f'user_{user_id}')
         
-        # بث للعائلة
         families = FamilyMember.query.filter_by(user_id=user_id).all()
         for fam in families:
             socketio.emit(
@@ -1451,7 +1317,6 @@ def get_my_current_location():
 @app.route('/api/location/accuracy', methods=['GET'])
 @jwt_required()
 def get_location_accuracy():
-    """دقة GPS"""
     try:
         user_id = int(get_jwt_identity())
         location = CurrentLocation.query.filter_by(user_id=user_id).first()
@@ -1496,69 +1361,11 @@ def get_location_accuracy():
         app.logger.error(f'Location accuracy error: {str(e)}')
         return jsonify({'error': 'حدث خطأ'}), 500
 
-@app.route('/api/location/batch', methods=['POST'])
-@jwt_required()
-@limiter.limit("50 per minute")
-def batch_update_locations():
-    """تحديث مجموعة مواقع دفعة واحدة لتوفير النطاق الترددي"""
-    try:
-        user_id = int(get_jwt_identity())
-        
-        if not request.is_json:
-            return jsonify({'error': 'يجب إرسال JSON'}), 400
-        
-        data = request.get_json()
-        locations = data.get('locations', [])
-        
-        if not locations:
-            return jsonify({'error': 'لا توجد بيانات للتحديث'}), 400
-        
-        if len(locations) > 100:
-            return jsonify({'error': 'الحد الأقصى 100 موقع في الطلب الواحد'}), 400
-        
-        updated_count = 0
-        now = datetime.now(timezone.utc)
-        
-        for loc in locations:
-            lat = loc.get('lat')
-            lng = loc.get('lng')
-            
-            if not lat or not lng:
-                continue
-            
-            if not is_valid_coordinates(lat, lng):
-                continue
-            
-            history = LocationHistory(
-                user_id=user_id,
-                lat=float(lat),
-                lng=float(lng),
-                speed=float(loc.get('speed', 0)),
-                heading=float(loc.get('heading', 0)),
-                accuracy=float(loc.get('accuracy', 0)),
-                timestamp=datetime.fromisoformat(loc.get('timestamp', now.isoformat()))
-            )
-            db.session.add(history)
-            updated_count += 1
-        
-        db.session.commit()
-        
-        return jsonify({
-            'status': 'success',
-            'message': f'تم تحديث {updated_count} موقع',
-            'updated_count': updated_count
-        })
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f'Batch location update error: {str(e)}')
-        return jsonify({'error': 'حدث خطأ في التحديث الدفعي'}), 500
-
 # ====== API الملاحة ======
 @app.route('/api/navigation/route', methods=['POST'])
 @jwt_required()
 @cache.cached(timeout=300, query_string=True)
 def get_navigation_route():
-    """حساب المسار باستخدام OSRM"""
     try:
         data = request.get_json()
         start_lat = data.get('start_lat')
@@ -1841,7 +1648,7 @@ def create_share():
         db.session.add(room)
         db.session.commit()
         
-        # ✅ بث الموقع الحالي إلى غرفة المشاركة
+        # ✅ بث الموقع الحالي إلى غرفة المشاركة فور إنشائها
         current_location = CurrentLocation.query.filter_by(user_id=user_id).first()
         user = User.query.get(user_id)
         
@@ -1963,7 +1770,7 @@ def unread_count():
     except Exception as e:
         return jsonify({'error': 'حدث خطأ'}), 500
 
-# ====== API الإحصائيات والتحليلات ======
+# ====== API الإحصائيات ======
 @app.route('/api/dashboard/stats', methods=['GET'])
 @cache.cached(timeout=60)
 def dashboard_stats():
@@ -2037,7 +1844,6 @@ def send_sos():
             'message': message[:500], 'timestamp': datetime.now(timezone.utc).isoformat()
         }, broadcast=True)
         
-        # إشعار الأصدقاء والعائلة
         friendships = Friendship.query.filter(
             ((Friendship.requester_id == user_id) | (Friendship.addressee_id == user_id)),
             Friendship.status == 'accepted'
@@ -2053,7 +1859,7 @@ def send_sos():
         db.session.rollback()
         return jsonify({'error': 'حدث خطأ'}), 500
 
-# ====== خدمة الملفات محسنة ======
+# ====== خدمة الملفات ======
 @app.route('/manifest.json')
 @cache.cached(timeout=3600)
 def manifest():
@@ -2083,7 +1889,7 @@ def manifest():
 def service_worker():
 
     sw_code = """
-const CACHE_NAME = 'geolegend-v7';
+const CACHE_NAME = 'geolegend-v6';
 
 // INSTALL - تخزين أولي للصفحة الرئيسية
 self.addEventListener('install', (event) => {
@@ -2194,7 +2000,6 @@ self.addEventListener('fetch', (event) => {
         mimetype='application/javascript'
     )
 
-    # منع تخزين sw.js نفسه
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -2207,7 +2012,6 @@ def favicon():
 
 @app.route('/static/<path:filename>')
 def custom_static(filename):
-    """خدمة الملفات الثابتة مع التخزين المؤقت"""
     try:
         response = send_file(f'static/{filename}')
         if filename.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg')):
