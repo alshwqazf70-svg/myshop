@@ -886,12 +886,12 @@
                 }
             }, 200);
 
-            initCesiumMap();
-            initSocketIO();
-            restoreUserState();
-            setupConnectionListeners();
-            setupIdleDetection();
-            checkForShareLink();
+            checkForShareLink();   // ✅ أولاً: اكتشاف رابط المشاركة
+			initCesiumMap();
+			initSocketIO();        // ✅ ثم: الاتصال (سيستخدم sharedRoomId)
+			restoreUserState();
+			setupConnectionListeners();
+			setupIdleDetection();
 
             console.log('🌟 GeoLegend 3D - All Systems Ready');
             console.log('🏙️ Cesium 3D | 🧭 Navigation | 👨‍👩‍👧‍👦 Family | 🚨 SOS | 🤖 AI');
