@@ -5,11 +5,6 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <script>
-        if (!window.location.search) {
-            window.location.replace(window.location.pathname + '?v=' + Date.now());
-        }
-    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0a0a1a">
     <meta name="description" content="GeoLegend - نظام مشاركة الموقع الجغرافي الأسطوري المباشر">
@@ -21,10 +16,10 @@
 
     <title>GeoLegend | أقوى نظام تتبع مباشر 3D</title>
 
-    <!-- CesiumJS CSS (3D مجاني بالكامل - بدون توكن) -->
+    <!-- CesiumJS CSS -->
     <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" />
 
-    <!-- Leaflet CSS (احتياطي) -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <!-- Font Awesome -->
@@ -56,7 +51,6 @@
             overflow: hidden;
         }
 
-        /* ====== حاويات الخريطة ====== */
         #cesiumContainer {
             position: fixed;
             inset: 0;
@@ -74,15 +68,9 @@
             display: none;
         }
 
-        #map {
-            width: 100%;
-            height: 100%;
-        }
+        #map { width: 100%; height: 100%; }
 
-        /* Cesium tweaks */
-        .cesium-viewer-bottom {
-            display: none !important;
-        }
+        .cesium-viewer-bottom { display: none !important; }
 
         .cesium-viewer-toolbar {
             top: 80px !important;
@@ -102,9 +90,7 @@
             background: rgba(0,255,255,0.2) !important;
         }
 
-        .cesium-button {
-            color: white !important;
-        }
+        .cesium-button { color: white !important; }
 
         .cesium-infoBox {
             background: rgba(10, 10, 30, 0.95) !important;
@@ -114,7 +100,6 @@
             backdrop-filter: blur(20px);
         }
 
-        /* ====== أنيميشن ====== */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
@@ -193,7 +178,6 @@
         .delay-500 { animation-delay: 0.5s; }
         .delay-600 { animation-delay: 0.6s; }
 
-        /* ====== تأثير الزجاج ====== */
         .glass-card {
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
@@ -230,9 +214,7 @@
             box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
         }
 
-        .glass-input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-        }
+        .glass-input::placeholder { color: rgba(255, 255, 255, 0.4); }
 
         .glass-btn {
             background: rgba(255, 255, 255, 0.08);
@@ -259,10 +241,7 @@
             box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
         }
 
-        .glass-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .glass-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .neon-btn {
             background: linear-gradient(135deg, #00d4ff, #7b2ff7);
@@ -287,13 +266,8 @@
             transform: scale(1.03);
         }
 
-        .neon-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
+        .neon-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        /* ====== لوحة المعلومات العلوية ====== */
         .info-panel {
             position: fixed;
             top: 15px;
@@ -321,12 +295,8 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
-        .info-card .value {
-            font-weight: 700;
-            font-size: 15px;
-        }
+        .info-card .value { font-weight: 700; font-size: 15px; }
 
-        /* ====== أزرار التحكم الجانبية ====== */
         .side-controls {
             position: fixed;
             bottom: 20px;
@@ -386,7 +356,6 @@
             animation: pulseGlow 1.5s infinite;
         }
 
-        /* ====== شريط التنقل السفلي ====== */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -417,15 +386,10 @@
             padding: 4px 12px;
         }
 
-        .bottom-nav-btn.active {
-            color: var(--neon-cyan);
-        }
+        .bottom-nav-btn.active { color: var(--neon-cyan); }
 
-        .bottom-nav-btn .nav-icon {
-            font-size: 22px;
-        }
+        .bottom-nav-btn .nav-icon { font-size: 22px; }
 
-        /* ====== شاشة التحميل ====== */
         .loading-screen {
             position: fixed;
             inset: 0;
@@ -469,7 +433,6 @@
             box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         }
 
-        /* ====== الإشعارات ====== */
         .notification {
             background: rgba(20, 20, 40, 0.95);
             backdrop-filter: blur(20px);
@@ -492,7 +455,6 @@
         .notification.warning { border-right: 4px solid #f59e0b; }
         .notification.info { border-right: 4px solid #3b82f6; }
 
-        /* ====== المودال ====== */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -533,10 +495,8 @@
 
         .modal-close-btn:hover { color: white; }
 
-        /* ====== تأثير SOS ====== */
         .sos-flash { animation: sosFlash 0.5s ease 3; }
 
-        /* ====== Responsive ====== */
         @media (max-width: 768px) {
             .info-panel { top: 8px; gap: 5px; }
             .info-card { padding: 6px 10px; font-size: 10px; gap: 5px; }
@@ -558,7 +518,7 @@
 </head>
 <body>
 
-    <!-- ==================== شاشة التحميل ==================== -->
+    <!-- شاشة التحميل -->
     <div class="loading-screen" id="loadingScreen">
         <div style="text-align: center; position: relative;">
             <div class="loader-spinner" style="margin: 0 auto 30px;"></div>
@@ -574,11 +534,11 @@
         </div>
     </div>
 
-    <!-- ==================== حاويات الخريطة ==================== -->
+    <!-- حاويات الخريطة -->
     <div id="cesiumContainer"></div>
     <div id="leafletContainer"><div id="map"></div></div>
 
-    <!-- ==================== لوحة المعلومات العلوية ==================== -->
+    <!-- لوحة المعلومات العلوية -->
     <div class="info-panel" id="infoPanel">
         <div class="info-card">
             <span style="font-size: 16px;">🏎️</span>
@@ -620,7 +580,7 @@
         </div>
     </div>
 
-    <!-- ==================== أزرار التحكم الجانبية ==================== -->
+    <!-- أزرار التحكم الجانبية -->
     <div class="side-controls">
         <button class="side-btn" onclick="centerMapOnUser()" title="📍 تحديد موقعي">
             <span class="btn-icon">📍</span> موقعي
@@ -640,7 +600,7 @@
         </button>
     </div>
 
-    <!-- ==================== شريط التنقل السفلي ==================== -->
+    <!-- شريط التنقل السفلي -->
     <div class="bottom-nav">
         <button class="bottom-nav-btn active" onclick="openTab('map')">
             <span class="nav-icon">🗺️</span> الخريطة
@@ -659,7 +619,7 @@
         </button>
     </div>
 
-    <!-- ==================== مودال تسجيل الدخول ==================== -->
+    <!-- مودال تسجيل الدخول -->
     <div id="loginModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('loginModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -684,7 +644,7 @@
         </div>
     </div>
 
-    <!-- ==================== مودال التسجيل ==================== -->
+    <!-- مودال التسجيل -->
     <div id="registerModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('registerModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -713,7 +673,7 @@
         </div>
     </div>
 
-    <!-- ==================== مودال العائلة ==================== -->
+    <!-- مودال العائلة -->
     <div id="familyModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('familyModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -726,7 +686,7 @@
         </div>
     </div>
 
-    <!-- ==================== مودال الأصدقاء ==================== -->
+    <!-- مودال الأصدقاء -->
     <div id="friendsModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('friendsModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -743,7 +703,7 @@
         </div>
     </div>
 
-    <!-- ==================== مودال الرحلات ==================== -->
+    <!-- مودال الرحلات -->
     <div id="tripsModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('tripsModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -758,7 +718,7 @@
         </div>
     </div>
 
-    <!-- ==================== مودال القائمة ==================== -->
+    <!-- مودال القائمة -->
     <div id="menuModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('menuModal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -775,15 +735,12 @@
         </div>
     </div>
 
-    <!-- ==================== حاوية الإشعارات ==================== -->
+    <!-- حاوية الإشعارات -->
     <div id="notifications" style="position: fixed; top: 20px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; max-width: 380px;"></div>
 
-    <!-- ==================== السكريبتات ==================== -->
-    <!-- CesiumJS -->
+    <!-- السكريبتات -->
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
-    <!-- Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- SocketIO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 
     <script>
@@ -814,36 +771,34 @@
         var navigationActive = false;
         var navigationTarget = null;
 
-        // ====== Cooldown System (مُصلح - يعمل بشكل صحيح) ======
-		var cooldowns = {};
-		
-		var COOLDOWN_TIMES = {
-		    sos: 10000,
-		    share: 5000,
-		    login: 5000,
-		    register: 5000,
-		    tracking: 500,
-		    mapLayer: 1000,
-		    copy: 2000,
-		    center: 500
-		};
-		
-		function isOnCooldown(action) {
-		    var now = Date.now();
-		    var lastTime = cooldowns[action] || 0;
-		    var cooldownTime = COOLDOWN_TIMES[action] || 500;
-		    
-		    if (now - lastTime < cooldownTime) {
-		        var remaining = Math.ceil((cooldownTime - (now - lastTime)) / 1000);
-		        if (remaining > 0) {
-		            showNotification('⏳ انتظر', 'يمكنك المحاولة بعد ' + remaining + ' ثانية', 'warning');
-		        }
-		        return true;
-		    }
-		    
-		    cooldowns[action] = now;
-		    return false;
-		}
+        // ====== Cooldown System ======
+        var cooldowns = {};
+
+        var COOLDOWN_TIMES = {
+            sos: 10000,
+            share: 5000,
+            login: 5000,
+            register: 5000,
+            tracking: 500,
+            mapLayer: 1000,
+            copy: 2000,
+            center: 500
+        };
+
+        function isOnCooldown(action) {
+            var now = Date.now();
+            var lastTime = cooldowns[action] || 0;
+            var cooldownTime = COOLDOWN_TIMES[action] || 500;
+            if (now - lastTime < cooldownTime) {
+                var remaining = Math.ceil((cooldownTime - (now - lastTime)) / 1000);
+                if (remaining > 0) {
+                    showNotification('⏳ انتظر', 'يمكنك المحاولة بعد ' + remaining + ' ثانية', 'warning');
+                }
+                return true;
+            }
+            cooldowns[action] = now;
+            return false;
+        }
 
         // ====== طبقات الخريطة ======
         var mapLayers = [
@@ -890,8 +845,9 @@
         // ==================== تهيئة Cesium 3D ====================
         function initCesiumMap() {
             try {
-                // توجيه Cesium لاستخدام assets من المسار الصحيح
-                Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4MjU1YmMwOS03MWYwLTQ3NzItYjg4My1mM2VkNTEwMTUwODMiLCJpZCI6NDMwMjEyLCJzdWIiOiJNYWxlazc3MzciLCJpc3MiOiJodHRwczovL2lvbi5jZXNpdW0uY29tIiwiYXVkIjoiVW50aXRsZWRNYWxlayIsImlhdCI6MTc3ODUyMzM2MX0.NlGhCuwcHYQRsY04L84BAicL6kt_DewkVPsZTvcOe3w'; // لا نحتاج توكن
+                // ✅ استخدام مفتاح Cesium Ion الخاص بك
+                Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4MjU1YmMwOS03MWYwLTQ3NzItYjg4My1mM2VkNTEwMTUwODMiLCJpZCI6NDMwMjEyLCJzdWIiOiJNYWxlayIsImlzcyI6Imh0dHBzOi8vaW9uLmNlc2l1bS5jb20iLCJhdWQiOiJVbnRpdGxlZE1hbGVrIiwiaWF0IjoxNzc4NTIzMzYxfQ.NlGhCuwcHYQRsY04L84BAicL6kt_DewkVPsZTvcOe3w';
+                
                 Cesium.buildModuleUrl.setBaseUrl('https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/');
 
                 cesiumViewer = new Cesium.Viewer('cesiumContainer', {
@@ -909,16 +865,13 @@
                     shouldAnimate: true,
                     terrainProvider: Cesium.createWorldTerrain(),
                     imageryProvider: new Cesium.UrlTemplateImageryProvider({
-                        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                        subdomains: ['a', 'b', 'c', 'd'],
+                        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                         maximumLevel: 19
                     })
                 });
 
-                // إزالة الشعارات الزائدة
                 cesiumViewer._cesiumWidget._creditContainer.style.display = 'none';
 
-                // توجيه الكاميرا إلى الرياض
                 cesiumViewer.camera.flyTo({
                     destination: Cesium.Cartesian3.fromDegrees(46.6753, 24.7136, 5000),
                     orientation: {
@@ -928,7 +881,6 @@
                     }
                 });
 
-                // إضافة كيان المستخدم
                 userEntity = cesiumViewer.entities.add({
                     id: 'user',
                     position: Cesium.Cartesian3.fromDegrees(46.6753, 24.7136, 100),
@@ -949,7 +901,6 @@
                     }
                 });
 
-                // إضافة خط المسار
                 userPathEntity = cesiumViewer.entities.add({
                     id: 'userPath',
                     polyline: {
@@ -979,14 +930,10 @@
             canvas.width = 64;
             canvas.height = 64;
             var ctx = canvas.getContext('2d');
-
-            // دائرة خارجية متوهجة
             ctx.beginPath();
             ctx.arc(32, 32, 30, 0, 2 * Math.PI);
             ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
             ctx.fill();
-
-            // دائرة داخلية
             ctx.beginPath();
             ctx.arc(32, 32, 12, 0, 2 * Math.PI);
             ctx.fillStyle = '#00ffff';
@@ -994,13 +941,10 @@
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 3;
             ctx.stroke();
-
-            // نقطة المركز
             ctx.beginPath();
             ctx.arc(32, 32, 4, 0, 2 * Math.PI);
             ctx.fillStyle = 'white';
             ctx.fill();
-
             return canvas.toDataURL();
         }
 
@@ -1012,108 +956,99 @@
                 zoomControl: false,
                 attributionControl: false
             });
-
             L.tileLayer(mapLayers[currentMapLayer].url, { maxZoom: 19 }).addTo(leafletMap);
             L.control.zoom({ position: 'bottomleft' }).addTo(leafletMap);
-
             var icon = L.divIcon({
                 html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#00ffff,#9333ea);border-radius:50%;border:3px solid white;box-shadow:0 0 30px rgba(0,255,255,0.8);animation:pulse 2s infinite;"></div>',
                 iconSize: [36, 36],
                 iconAnchor: [18, 18]
             });
-
             userMarker = L.marker([24.7136, 46.6753], { icon: icon, zIndexOffset: 1000 }).addTo(leafletMap);
             userPathLine = L.polyline([], { color: '#00ffff', weight: 4, opacity: 0.7, smoothFactor: 1 }).addTo(leafletMap);
-
             userMarker.bindPopup('<b>📍 أنت هنا</b><br><small>لم يبدأ التتبع بعد</small>');
-
             leafletMap.on('movestart', function(e) {
                 if (e.originalEvent) autoFollowUser = false;
             });
-
             console.log('✅ Leaflet Map Ready');
         }
 
         // ==================== تهيئة SocketIO ====================
         function initSocketIO() {
-		    try {
-		        socket = io.connect(window.location.origin, {
-		            transports: ['websocket', 'polling'],
-		            reconnection: true,
-		            reconnectionAttempts: 10,
-		            reconnectionDelay: 1000
-		        });
-		
-		        socket.on('connect', function() {
-		            console.log('🔗 SocketIO متصل');
-		            
-		            // ✅ الانضمام التلقائي لغرفة المشاركة عند فتح رابط share
-		            var path = window.location.pathname;
-		            var shareMatch = path.match(/\/share\/(.+)/);
-		            if (shareMatch && shareMatch[1]) {
-		                socket.emit('join_share_room', { room_id: shareMatch[1] });
-		                console.log('📡 انضم إلى غرفة المشاركة: ' + shareMatch[1]);
-		                showNotification('🔗', 'تم الانضمام إلى جلسة المشاركة - انتظر ظهور الموقع...', 'info');
-		            }
-		        });
-		        
-		        socket.on('location_update', function(data) {
-		            console.log('📍 استقبال موقع:', data);
-		            if (data.user_id === currentUserId) return;
-		            updateOtherUserMarker(data);
-		            
-		            // ✅ إذا كان المستخدم في صفحة مشاركة، تحريك الكاميرا إلى موقع المشارك
-		            var path = window.location.pathname;
-		            if (path.includes('/share/') && cesiumViewer && use3D) {
-		                cesiumViewer.camera.flyTo({
-		                    destination: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 800),
-		                    orientation: {
-		                        heading: Cesium.Math.toRadians(0),
-		                        pitch: Cesium.Math.toRadians(-45),
-		                        roll: 0
-		                    },
-		                    duration: 2
-		                });
-		                document.title = '🔗 ' + (data.name || 'مشارك') + ' - GeoLegend';
-		            }
-		        });
-		        
-		        socket.on('family_location_update', function(data) {
-		            updateOtherUserMarker(data);
-		        });
-		        
-		        socket.on('sos_alert', function(data) {
-		            showNotification('🚨 SOS!', 'إشارة طوارئ من مستخدم ' + data.user_id, 'error');
-		            if (cesiumViewer && use3D) {
-		                cesiumViewer.entities.add({
-		                    position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 200),
-		                    billboard: {
-		                        image: createSOSMarkerImage(),
-		                        scale: 0.5,
-		                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM
-		                    },
-		                    label: {
-		                        text: '🚨 SOS!\n' + (data.message || ''),
-		                        font: '12px Cairo',
-		                        fillColor: Cesium.Color.RED,
-		                        outlineColor: Cesium.Color.BLACK,
-		                        outlineWidth: 2,
-		                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-		                        verticalOrigin: Cesium.VerticalOrigin.TOP,
-		                        pixelOffset: new Cesium.Cartesian2(0, 20)
-		                    }
-		                });
-		            }
-		        });
-		        
-		        socket.on('new_notification', function(data) {
-		            showNotification(data.title, data.message, data.type);
-		        });
-		        
-		    } catch (error) {
-		        console.warn('⚠️ SocketIO غير متاح');
-		    }
-		}
+            try {
+                socket = io.connect(window.location.origin, {
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: 10,
+                    reconnectionDelay: 1000
+                });
+
+                socket.on('connect', function() {
+                    console.log('🔗 SocketIO متصل');
+                    
+                    var path = window.location.pathname;
+                    var shareMatch = path.match(/\/share\/(.+)/);
+                    if (shareMatch && shareMatch[1]) {
+                        socket.emit('join_share_room', { room_id: shareMatch[1] });
+                        console.log('📡 انضم إلى غرفة المشاركة: ' + shareMatch[1]);
+                        showNotification('🔗', 'تم الانضمام إلى جلسة المشاركة', 'info');
+                    }
+                });
+
+                socket.on('location_update', function(data) {
+                    console.log('📍 استقبال موقع:', data);
+                    if (data.user_id === currentUserId) return;
+                    updateOtherUserMarker(data);
+                    
+                    var path = window.location.pathname;
+                    if (path.includes('/share/') && cesiumViewer && use3D) {
+                        cesiumViewer.camera.flyTo({
+                            destination: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 800),
+                            orientation: {
+                                heading: Cesium.Math.toRadians(0),
+                                pitch: Cesium.Math.toRadians(-45),
+                                roll: 0
+                            },
+                            duration: 2
+                        });
+                    }
+                });
+
+                socket.on('family_location_update', function(data) {
+                    updateOtherUserMarker(data);
+                });
+
+                socket.on('sos_alert', function(data) {
+                    showNotification('🚨 SOS!', 'إشارة طوارئ من مستخدم ' + data.user_id, 'error');
+                    if (cesiumViewer && use3D) {
+                        cesiumViewer.entities.add({
+                            position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 200),
+                            billboard: {
+                                image: createSOSMarkerImage(),
+                                scale: 0.5,
+                                verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+                            },
+                            label: {
+                                text: '🚨 SOS!\n' + (data.message || ''),
+                                font: '12px Cairo',
+                                fillColor: Cesium.Color.RED,
+                                outlineColor: Cesium.Color.BLACK,
+                                outlineWidth: 2,
+                                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                                verticalOrigin: Cesium.VerticalOrigin.TOP,
+                                pixelOffset: new Cesium.Cartesian2(0, 20)
+                            }
+                        });
+                    }
+                });
+
+                socket.on('new_notification', function(data) {
+                    showNotification(data.title, data.message, data.type);
+                });
+
+            } catch (error) {
+                console.warn('⚠️ SocketIO غير متاح');
+            }
+        }
 
         function createSOSMarkerImage() {
             var canvas = document.createElement('canvas');
@@ -1139,10 +1074,11 @@
         function updateOtherUserMarker(data) {
             if (!cesiumViewer || !use3D) return;
             var key = 'user_' + data.user_id;
-            if (familyEntities[key]) {
-                familyEntities[key].position = Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50);
+            var entity = cesiumViewer.entities.getById(key);
+            if (entity) {
+                entity.position = Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50);
             } else {
-                familyEntities[key] = cesiumViewer.entities.add({
+                cesiumViewer.entities.add({
                     id: key,
                     position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50),
                     billboard: {
@@ -1242,164 +1178,151 @@
 
         // ==================== تتبع الموقع ====================
         function startTracking() {
-		    if (!navigator.geolocation) { 
-		        showNotification('❌', 'GPS غير مدعوم في هذا المتصفح', 'error'); 
-		        return; 
-		    }
-		    
-		    showNotification('📍', 'جارٍ طلب إذن GPS...', 'info');
-		    
-		    navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
-		        if (result.state === 'denied') {
-		            showNotification('❌', 'تم رفض إذن GPS. الرجاء السماح بالموقع من إعدادات المتصفح', 'error');
-		            return;
-		        }
-		        
-		        navigator.geolocation.getCurrentPosition(
-		            function(position) {
-		                // ✅ إعدادات محسنة للدقة العالية
-		                var options = { 
-		                    enableHighAccuracy: true, 
-		                    timeout: 30000, 
-		                    maximumAge: 0 
-		                };
-		                watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
-		                isTracking = true;
-		                autoFollowUser = true;
-		                updatePosition(position);
-		                updateTrackingUI(true);
-		                showNotification('✅', 'بدأ التتبع المباشر بدقة عالية', 'success');
-		                console.log('✅ Tracking started with high accuracy');
-		            },
-		            function(error) {
-		                isTracking = false;
-		                updateTrackingUI(false);
-		                var msg = '';
-		                switch(error.code) {
-		                    case error.PERMISSION_DENIED: msg = 'تم رفض إذن GPS. افتح إعدادات المتصفح > الموقع > السماح'; break;
-		                    case error.POSITION_UNAVAILABLE: msg = 'الموقع غير متوفر. تأكد من تشغيل GPS'; break;
-		                    case error.TIMEOUT: msg = 'انتهت مهلة GPS. حاول مرة أخرى'; break;
-		                    default: msg = 'خطأ: ' + error.message;
-		                }
-		                showNotification('❌', msg, 'error');
-		                console.error('❌ GPS Error:', error);
-		            },
-		            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-		        );
-		    });
-		}
-		
-		function stopTracking() {
-		    if (watchId) { 
-		        navigator.geolocation.clearWatch(watchId); 
-		        watchId = null; 
-		    }
-		    isTracking = false;
-		    updateTrackingUI(false);
-		    showNotification('⏹️', 'تم إيقاف التتبع', 'info');
-		}
-		
-		function toggleTracking() {
-		    if (isTracking) {
-		        stopTracking();
-		    } else {
-		        startTracking();
-		    }
-		}
-		
-		function updateTrackingUI(tracking) {
-		    var btn = document.getElementById('trackingBtnSide');
-		    var icon = document.getElementById('trackingIconSide');
-		    var text = document.getElementById('trackingTextSide');
-		    var dot = document.getElementById('statusDot');
-		    var status = document.getElementById('trackingStatus');
-		    if (tracking) {
-		        if (btn) btn.classList.add('tracking-active');
-		        if (icon) icon.textContent = '⏹️';
-		        if (text) text.textContent = 'إيقاف التتبع';
-		        if (dot) { dot.style.color = '#00ff88'; dot.textContent = '●'; }
-		        if (status) { status.textContent = 'مباشر'; status.style.color = '#00ff88'; }
-		    } else {
-		        if (btn) btn.classList.remove('tracking-active');
-		        if (icon) icon.textContent = '▶️';
-		        if (text) text.textContent = 'بدء التتبع';
-		        if (dot) { dot.style.color = '#666'; dot.textContent = '●'; }
-		        if (status) { status.textContent = 'متوقف'; status.style.color = '#666'; }
-		    }
-		}
-		
-		function updatePosition(position) {
-		    var lat = position.coords.latitude;
-		    var lng = position.coords.longitude;
-		    var speed = position.coords.speed ? (position.coords.speed * 3.6) : 0;
-		    var heading = position.coords.heading || 0;
-		    var accuracy = position.coords.accuracy || 0;
-		
-		    // ✅ تجاهل التحديثات ضعيفة الدقة (أكثر من 50 متر خطأ)
-		    if (accuracy > 50) {
-		        console.log('⚠️ تجاهل تحديث ضعيف الدقة: ' + accuracy + 'م');
-		        return;
-		    }
-		
-		    // ✅ تجاهل الحركات الصغيرة جداً (أقل من 3 أمتار) عندما تكون السرعة شبه معدومة
-		    if (currentPosition) {
-		        var dist = haversineDistance(currentPosition.lat, currentPosition.lng, lat, lng);
-		        if (dist < 0.003 && speed < 0.5) {
-		            console.log('⚠️ تجاهل حركة صغيرة: ' + (dist * 1000).toFixed(1) + 'م');
-		            return;
-		        }
-		    }
-		
-		    currentPosition = { lat: lat, lng: lng, speed: speed.toFixed(1), heading: Math.round(heading), accuracy: Math.round(accuracy) };
-		
-		    // تحديث Cesium 3D
-		    if (cesiumViewer && use3D && userEntity) {
-		        userEntity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
-		        pathPositions.push(lng, lat);
-		        if (pathPositions.length > 400) pathPositions = pathPositions.slice(-300);
-		
-		        if (isTracking && autoFollowUser) {
-		            cesiumViewer.camera.flyTo({
-		                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
-		                orientation: {
-		                    heading: Cesium.Math.toRadians(heading),
-		                    pitch: Cesium.Math.toRadians(-45),
-		                    roll: 0
-		                },
-		                duration: 0.5
-		            });
-		        }
-		    }
-		
-		    // تحديث Leaflet
-		    if (leafletMap && userMarker) {
-		        userMarker.setLatLng([lat, lng]);
-		        if (isTracking && autoFollowUser) leafletMap.panTo([lat, lng], { animate: true, duration: 0.5 });
-		    }
-		
-		    updateDisplayInfo(lat, lng, speed, heading, accuracy);
-		
-		    var shouldSend = !lastSentPosition ||
-		        haversineDistance(lastSentPosition.lat, lastSentPosition.lng, lat, lng) > 0.005;
-		
-		    if (shouldSend) {
-		        sendLocationToServer(lat, lng, speed, heading, accuracy);
-		        lastSentPosition = { lat: lat, lng: lng };
-		    }
-		
-		    if (Date.now() - lastBatteryCheck > 15000) {
-		        lastBatteryCheck = Date.now();
-		        if (speed < 2 && watchId && isTracking) {
-		            navigator.geolocation.clearWatch(watchId);
-		            watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError,
-		                { enableHighAccuracy: false, timeout: 30000, maximumAge: 10000 });
-		        }
-		    }
-		
-		    if (navigationActive && navigationTarget) {
-		        updateNavigation(lat, lng);
-		    }
-		}
+            if (!navigator.geolocation) { 
+                showNotification('❌', 'GPS غير مدعوم في هذا المتصفح', 'error'); 
+                return; 
+            }
+            
+            showNotification('📍', 'جارٍ طلب إذن GPS...', 'info');
+            
+            navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+                if (result.state === 'denied') {
+                    showNotification('❌', 'تم رفض إذن GPS. الرجاء السماح بالموقع من إعدادات المتصفح', 'error');
+                    return;
+                }
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        var options = { 
+                            enableHighAccuracy: true, 
+                            timeout: 30000, 
+                            maximumAge: 0 
+                        };
+                        watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
+                        isTracking = true;
+                        autoFollowUser = true;
+                        updatePosition(position);
+                        updateTrackingUI(true);
+                        showNotification('✅', 'بدأ التتبع المباشر', 'success');
+                        console.log('✅ Tracking started');
+                    },
+                    function(error) {
+                        isTracking = false;
+                        updateTrackingUI(false);
+                        var msg = '';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED: msg = 'تم رفض إذن GPS. افتح إعدادات المتصفح > الموقع > السماح'; break;
+                            case error.POSITION_UNAVAILABLE: msg = 'الموقع غير متوفر. تأكد من تشغيل GPS'; break;
+                            case error.TIMEOUT: msg = 'انتهت مهلة GPS. حاول مرة أخرى'; break;
+                            default: msg = 'خطأ: ' + error.message;
+                        }
+                        showNotification('❌', msg, 'error');
+                        console.error('❌ GPS Error:', error);
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
+            });
+        }
+
+        function stopTracking() {
+            if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+            isTracking = false;
+            updateTrackingUI(false);
+        }
+
+        function toggleTracking() {
+            if (isTracking) { stopTracking(); } else { startTracking(); }
+        }
+
+        function updateTrackingUI(tracking) {
+            var btn = document.getElementById('trackingBtnSide');
+            var icon = document.getElementById('trackingIconSide');
+            var text = document.getElementById('trackingTextSide');
+            var dot = document.getElementById('statusDot');
+            var status = document.getElementById('trackingStatus');
+            if (tracking) {
+                if (btn) btn.classList.add('tracking-active');
+                if (icon) icon.textContent = '⏹️';
+                if (text) text.textContent = 'إيقاف التتبع';
+                if (dot) { dot.style.color = '#00ff88'; dot.textContent = '●'; }
+                if (status) { status.textContent = 'مباشر'; status.style.color = '#00ff88'; }
+            } else {
+                if (btn) btn.classList.remove('tracking-active');
+                if (icon) icon.textContent = '▶️';
+                if (text) text.textContent = 'بدء التتبع';
+                if (dot) { dot.style.color = '#666'; dot.textContent = '●'; }
+                if (status) { status.textContent = 'متوقف'; status.style.color = '#666'; }
+            }
+        }
+
+        function updatePosition(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            var speed = position.coords.speed ? (position.coords.speed * 3.6) : 0;
+            var heading = position.coords.heading || 0;
+            var accuracy = position.coords.accuracy || 0;
+
+            if (accuracy > 50) {
+                console.log('⚠️ تجاهل تحديث ضعيف الدقة: ' + accuracy + 'م');
+                return;
+            }
+
+            if (currentPosition) {
+                var dist = haversineDistance(currentPosition.lat, currentPosition.lng, lat, lng);
+                if (dist < 0.003 && speed < 0.5) {
+                    console.log('⚠️ تجاهل حركة صغيرة: ' + (dist * 1000).toFixed(1) + 'م');
+                    return;
+                }
+            }
+
+            currentPosition = { lat: lat, lng: lng, speed: speed.toFixed(1), heading: Math.round(heading), accuracy: Math.round(accuracy) };
+
+            if (cesiumViewer && use3D && userEntity) {
+                userEntity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
+                pathPositions.push(lng, lat);
+                if (pathPositions.length > 400) pathPositions = pathPositions.slice(-300);
+
+                if (isTracking && autoFollowUser) {
+                    cesiumViewer.camera.flyTo({
+                        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
+                        orientation: {
+                            heading: Cesium.Math.toRadians(heading),
+                            pitch: Cesium.Math.toRadians(-45),
+                            roll: 0
+                        },
+                        duration: 0.5
+                    });
+                }
+            }
+
+            if (leafletMap && userMarker) {
+                userMarker.setLatLng([lat, lng]);
+                if (isTracking && autoFollowUser) leafletMap.panTo([lat, lng], { animate: true, duration: 0.5 });
+            }
+
+            updateDisplayInfo(lat, lng, speed, heading, accuracy);
+
+            var shouldSend = !lastSentPosition ||
+                haversineDistance(lastSentPosition.lat, lastSentPosition.lng, lat, lng) > 0.005;
+
+            if (shouldSend) {
+                sendLocationToServer(lat, lng, speed, heading, accuracy);
+                lastSentPosition = { lat: lat, lng: lng };
+            }
+
+            if (Date.now() - lastBatteryCheck > 15000) {
+                lastBatteryCheck = Date.now();
+                if (speed < 2 && watchId && isTracking) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError,
+                        { enableHighAccuracy: false, timeout: 30000, maximumAge: 10000 });
+                }
+            }
+
+            if (navigationActive && navigationTarget) {
+                updateNavigation(lat, lng);
+            }
+        }
 
         function handleGeolocationError(error) {
             var msg = '';
@@ -1466,7 +1389,6 @@
             if (leafletMap) leafletMap.flyTo([currentPosition.lat, currentPosition.lng], 18, { animate: true, duration: 1 });
         }
 
-        // ==================== تبديل الطبقات ====================
         function toggleMapLayer() {
             if (isOnCooldown('mapLayer')) return;
             currentMapLayer = (currentMapLayer + 1) % mapLayers.length;
@@ -1497,7 +1419,6 @@
             }
         }
 
-        // ==================== الملاحة ====================
         function navigateTo() {
             if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); return; }
             var targetLat = prompt('أدخل خط العرض للوجهة:');
@@ -1530,7 +1451,6 @@
             }
         }
 
-        // ==================== مشاركة ====================
         function shareLocation() {
             if (isOnCooldown('share')) return;
             var token = getToken();
@@ -1547,7 +1467,7 @@
                     var url = d.full_url || (window.location.origin + '/share/' + d.room_id);
                     if (navigator.clipboard) {
                         navigator.clipboard.writeText(url).then(function() {
-                            showNotification('✅', 'تم نسخ الرابط', 'success');
+                            showNotification('✅', 'تم نسخ رابط المشاركة', 'success');
                         });
                     } else {
                         prompt('انسخ الرابط:', url);
@@ -1556,7 +1476,6 @@
             });
         }
 
-        // ==================== SOS ====================
         function sendSOS() {
             if (isOnCooldown('sos')) return;
             if (!currentPosition) { showNotification('❌', 'لا موقع', 'error'); return; }
@@ -1577,7 +1496,6 @@
             });
         }
 
-        // ==================== الرحلات ====================
         function startTrip() {
             if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع', 'warning'); return; }
             var name = prompt('اسم الرحلة:', 'رحلتي');
@@ -1597,7 +1515,6 @@
             .then(function(d) { if (d.status === 'success') showNotification('🏁', 'انتهت الرحلة', 'info'); });
         }
 
-        // ==================== المصادقة ====================
         function register() {
             if (isOnCooldown('register')) return;
             var name = document.getElementById('regName').value.trim();
@@ -1678,7 +1595,6 @@
             if (uid) currentUserId = parseInt(uid);
         }
 
-        // ==================== الأصدقاء ====================
         function sendFriendRequest() {
             var email = document.getElementById('friendEmail').value.trim();
             if (!email) { showNotification('⚠️', 'أدخل بريداً', 'warning'); return; }
@@ -1693,7 +1609,6 @@
             });
         }
 
-        // ==================== الإشعارات (XSS Safe) ====================
         function showNotification(title, message, type) {
             type = type || 'info';
             var container = document.getElementById('notifications');
@@ -1725,17 +1640,16 @@
             setTimeout(function() { if (el.parentNode) { el.style.opacity = '0'; el.style.transition = 'all 0.4s'; setTimeout(function() { if (el.parentNode) el.remove(); }, 400); } }, 5000);
         }
 
-        // ==================== مودالات ====================
         function showModal(id) {
             var m = document.getElementById(id);
             if (m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; var inp = m.querySelector('input'); if (inp) setTimeout(function() { inp.focus(); }, 300); }
         }
+        
         function closeModal(id) {
             var m = document.getElementById(id);
             if (m) { m.style.display = 'none'; document.body.style.overflow = ''; }
         }
 
-        // ==================== التبويبات ====================
         function openTab(tab) {
             document.querySelectorAll('.bottom-nav-btn').forEach(function(b) { b.classList.remove('active'); });
             switch(tab) {
@@ -1848,7 +1762,6 @@
             });
         }
 
-        // ==================== اختصارات ====================
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 't') { e.preventDefault(); toggleTracking(); }
             if (e.ctrlKey && e.key === 's') { e.preventDefault(); shareLocation(); }
@@ -1859,10 +1772,18 @@
             }
         });
 
-        // ==================== Service Worker ====================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').catch(function() {});
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(var i = 0; i < registrations.length; i++) {
+                        registrations[i].unregister();
+                    }
+                    navigator.serviceWorker.register('/sw.js?v=6').then(function() {
+                        console.log('✅ Service Worker v6 Registered');
+                    }).catch(function(err) {
+                        console.log('❌ SW registration failed:', err);
+                    });
+                });
             });
         }
 
