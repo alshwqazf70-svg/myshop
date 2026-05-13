@@ -848,7 +848,7 @@ def handle_join_group(data):
 
 @socketio.on('join_share_room')
 def handle_join_share(data):
-    """✅ انضمام إلى غرفة مشاركة - متاح للجميع بدون JWT"""
+    """✅ انضمام إلى غرفة مشاركة - يرسل آخر موقع حتى لو المالك غير متصل"""
     room_id = data.get('room_id')
     print(f'🔗 join_share_room called with room_id: {room_id}')
     
@@ -857,30 +857,37 @@ def handle_join_share(data):
         print(f'🔗 مستخدم انضم إلى غرفة المشاركة: {room_id}')
         
         room = Room.query.filter_by(room_id=room_id, is_active=True).first()
-        print(f'🔍 Room found: {room}')
         
         if room:
             current_location = CurrentLocation.query.filter_by(user_id=room.creator_id).first()
             user = User.query.get(room.creator_id)
-            print(f'🔍 Location: {current_location}, User: {user}')
             
             if current_location and user:
+                # ✅ حساب الوقت المنقضي منذ آخر تحديث
+                now = datetime.now(timezone.utc)
+                updated_at = make_aware(current_location.updated_at)
+                seconds_ago = int((now - updated_at).total_seconds())
+                
+                # ✅ تحديد إذا كان المالك متصل أم لا
+                is_online = seconds_ago < 30
+                
                 socketio.emit('location_update', {
                     'user_id': room.creator_id,
                     'lat': current_location.lat,
                     'lng': current_location.lng,
                     'speed': current_location.speed,
                     'heading': current_location.heading,
+                    'accuracy': current_location.accuracy,
                     'name': user.name,
-                    'timestamp': datetime.now(timezone.utc).isoformat()
+                    'is_online': is_online,
+                    'seconds_ago': seconds_ago,
+                    'timestamp': current_location.updated_at.isoformat()
                 }, room=f'share_{room_id}')
-                print(f'✅ تم إرسال موقع {user.name} إلى غرفة {room_id}')
+                
+                status_text = 'مباشر' if is_online else f'آخر ظهور منذ {seconds_ago} ثانية'
+                print(f'✅ تم إرسال موقع {user.name} - الحالة: {status_text}')
             else:
                 print(f'⚠️ لا يوجد موقع حالي للمستخدم {room.creator_id}')
-        else:
-            print(f'❌ الغرفة غير موجودة أو غير نشطة')
-    else:
-        print(f'❌ لا يوجد room_id')
 
 @socketio.on('ping_server')
 def handle_ping():
