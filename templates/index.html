@@ -604,31 +604,67 @@
         }
 
         function updateOtherUserMarker(data) {
-            console.log('🟡 [DEBUG] updateOtherUserMarker:', data);
-            if (!cesiumViewer || !use3D) return;
-            
-            var key = 'user_' + data.user_id;
-            var entity = cesiumViewer.entities.getById(key);
-            
-            if (entity) {
-                entity.position = Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50);
-            } else {
-                cesiumViewer.entities.add({
-                    id: key, name: data.name || 'مشارك',
-                    position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50),
-                    billboard: { image: createOtherUserMarkerImage(data.name || 'U'), scale: 0.7, verticalOrigin: Cesium.VerticalOrigin.BOTTOM },
-                    label: { text: '📍 ' + (data.name || 'مستخدم'), font: '14px Cairo', fillColor: Cesium.Color.CYAN, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 25) }
-                });
-                
-                if (isShareViewer) {
-                    cesiumViewer.camera.flyTo({
-                        destination: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 800),
-                        orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 },
-                        duration: 2
-                    });
-                }
-            }
-        }
+		    console.log('🟡 [DEBUG] updateOtherUserMarker:', data);
+		    
+		    // ✅ تحويل الإحداثيات إلى أرقام
+		    var lat = parseFloat(data.lat);
+		    var lng = parseFloat(data.lng);
+		    var name = data.name || 'مستخدم';
+		    
+		    // ✅ دعم Cesium 3D
+		    if (cesiumViewer && use3D) {
+		        var key = 'user_' + data.user_id;
+		        var entity = cesiumViewer.entities.getById(key);
+		        
+		        if (entity) {
+		            entity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
+		        } else {
+		            cesiumViewer.entities.add({
+		                id: key, name: name,
+		                position: Cesium.Cartesian3.fromDegrees(lng, lat, 50),
+		                billboard: { image: createOtherUserMarkerImage(name), scale: 0.7, verticalOrigin: Cesium.VerticalOrigin.BOTTOM },
+		                label: { text: '📍 ' + name, font: '14px Cairo', fillColor: Cesium.Color.CYAN, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 25) }
+		            });
+		            
+		            // ✅ تحريك الكاميرا للمشاهد
+		            if (isGuest || isShareViewer) {
+		                cesiumViewer.camera.flyTo({
+		                    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
+		                    orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 },
+		                    duration: 2
+		                });
+		            }
+		        }
+		    }
+		    
+		    // ✅ دعم Leaflet 2D
+		    if (leafletMap) {
+		        var markerKey = 'leaflet_user_' + data.user_id;
+		        
+		        if (familyEntities[markerKey]) {
+		            familyEntities[markerKey].setLatLng([lat, lng]);
+		        } else {
+		            var icon = L.divIcon({
+		                html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#ff6600,#ff9900);border-radius:50%;border:3px solid white;box-shadow:0 0 20px rgba(255,102,0,0.8);"></div>',
+		                iconSize: [36, 36],
+		                iconAnchor: [18, 18]
+		            });
+		            
+		            familyEntities[markerKey] = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(leafletMap);
+		            familyEntities[markerKey].bindPopup('<b>📍 ' + name + '</b>');
+		            
+		            // ✅ تحريك الخريطة للمشاهد
+		            if (isGuest || isShareViewer) {
+		                leafletMap.flyTo([lat, lng], 16, { animate: true, duration: 2 });
+		            }
+		        }
+		    }
+		    
+		    // ✅ إشعار للمشاهد
+		    if (isGuest || isShareViewer) {
+		        showNotification('✅', 'تم العثور على موقع ' + name, 'success');
+		    }
+		}
 
         function createOtherUserMarkerImage(initial) {
             var canvas = document.createElement('canvas'); canvas.width = 48; canvas.height = 48; var ctx = canvas.getContext('2d');
