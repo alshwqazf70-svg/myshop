@@ -985,12 +985,22 @@
                 socket.on('connect', function() {
                     console.log('🔗 SocketIO متصل');
                     
+                    // ✅ الانضمام التلقائي لغرفة المشاركة عند فتح رابط share
                     var path = window.location.pathname;
                     var shareMatch = path.match(/\/share\/(.+)/);
                     if (shareMatch && shareMatch[1]) {
-                        socket.emit('join_share_room', { room_id: shareMatch[1] });
-                        console.log('📡 انضم إلى غرفة المشاركة: ' + shareMatch[1]);
-                        showNotification('🔗', 'تم الانضمام إلى جلسة المشاركة', 'info');
+                        var roomId = shareMatch[1];
+                        socket.emit('join_share_room', { room_id: roomId });
+                        console.log('📡 انضم إلى غرفة المشاركة: ' + roomId);
+                        showNotification('🔗', 'تم الانضمام إلى جلسة المشاركة - انتظر ظهور الموقع...', 'info');
+                        
+                        // إخفاء علامة المستخدم الافتراضية
+                        if (userEntity) {
+                            userEntity.show = false;
+                        }
+                        
+                        // تغيير عنوان الصفحة
+                        document.title = '🔗 GeoLegend - مشاركة مباشرة';
                     }
                 });
 
@@ -998,19 +1008,6 @@
                     console.log('📍 استقبال موقع:', data);
                     if (data.user_id === currentUserId) return;
                     updateOtherUserMarker(data);
-                    
-                    var path = window.location.pathname;
-                    if (path.includes('/share/') && cesiumViewer && use3D) {
-                        cesiumViewer.camera.flyTo({
-                            destination: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 800),
-                            orientation: {
-                                heading: Cesium.Math.toRadians(0),
-                                pitch: Cesium.Math.toRadians(-45),
-                                roll: 0
-                            },
-                            duration: 2
-                        });
-                    }
                 });
 
                 socket.on('family_location_update', function(data) {
@@ -1071,32 +1068,54 @@
             return canvas.toDataURL();
         }
 
+        // ✅ دالة تحديث علامة المستخدم الآخر (للمشاركة)
         function updateOtherUserMarker(data) {
             if (!cesiumViewer || !use3D) return;
+            
             var key = 'user_' + data.user_id;
             var entity = cesiumViewer.entities.getById(key);
+            
             if (entity) {
+                // تحديث موقع العلامة الموجودة
                 entity.position = Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50);
             } else {
-                cesiumViewer.entities.add({
+                // إنشاء علامة جديدة
+                var newEntity = cesiumViewer.entities.add({
                     id: key,
+                    name: data.name || 'مستخدم مشارك',
                     position: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 50),
                     billboard: {
                         image: createOtherUserMarkerImage(data.name || 'U'),
-                        scale: 0.5,
+                        scale: 0.7,
                         verticalOrigin: Cesium.VerticalOrigin.BOTTOM
                     },
                     label: {
-                        text: data.name || 'مستخدم',
-                        font: '12px Cairo',
-                        fillColor: Cesium.Color.WHITE,
+                        text: '📍 ' + (data.name || 'مستخدم'),
+                        font: '14px Cairo',
+                        fillColor: Cesium.Color.CYAN,
                         outlineColor: Cesium.Color.BLACK,
-                        outlineWidth: 2,
+                        outlineWidth: 3,
                         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                         verticalOrigin: Cesium.VerticalOrigin.TOP,
-                        pixelOffset: new Cesium.Cartesian2(0, 15)
+                        pixelOffset: new Cesium.Cartesian2(0, 25)
                     }
                 });
+                
+                // تحريك الكاميرا إلى موقع المشارك
+                var path = window.location.pathname;
+                if (path.includes('/share/')) {
+                    cesiumViewer.camera.flyTo({
+                        destination: Cesium.Cartesian3.fromDegrees(data.lng, data.lat, 800),
+                        orientation: {
+                            heading: Cesium.Math.toRadians(0),
+                            pitch: Cesium.Math.toRadians(-45),
+                            roll: 0
+                        },
+                        duration: 2
+                    });
+                }
+                
+                console.log('✅ تم إنشاء علامة جديدة للمشارك: ' + (data.name || 'مجهول'));
             }
         }
 
