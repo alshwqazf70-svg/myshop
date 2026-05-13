@@ -1085,7 +1085,7 @@
 		    try {
 		        // ✅ اتصال محسّن مع تشخيص للأخطاء
 		        socket = io.connect(window.location.origin, {
-		            transports: ['polling', 'websocket'],
+		            transports: ['polling'],
 		            reconnection: true,
 		            reconnectionAttempts: Infinity,
 		            reconnectionDelay: 1000,
