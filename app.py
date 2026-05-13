@@ -136,6 +136,15 @@ class BruteForceProtection:
 
 brute_force = BruteForceProtection()
 
+# ====== دالة مساعدة للتواريخ ======
+def make_aware(dt):
+    """تحويل التاريخ إلى timezone-aware إذا لم يكن كذلك"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
 # ====== دوال المساعدة ======
 def haversine(lat1, lng1, lat2, lng2):
     try:
@@ -506,7 +515,7 @@ class Room(db.Model):
     def is_expired(self):
         if not self.expiry:
             return False
-        return datetime.now(timezone.utc) > self.expiry
+        return datetime.now(timezone.utc) > make_aware(self.expiry)
 
 class SOSAlert(db.Model):
     __tablename__ = 'sos_alerts'
@@ -1214,7 +1223,9 @@ def update_location():
             .order_by(LocationHistory.timestamp.desc()).first()
         
         if last_history:
-            time_diff = (now - last_history.timestamp).total_seconds()
+            # ✅ إصلاح: التأكد من أن التاريخين متوافقين
+            last_time = make_aware(last_history.timestamp)
+            time_diff = (now - last_time).total_seconds()
             distance = haversine(last_history.lat, last_history.lng, float(lat), float(lng))
             should_save = time_diff >= 30 or distance > 0.01
         
@@ -1252,12 +1263,12 @@ def update_location():
                 active_trip.end_lat = float(lat)
                 active_trip.end_lng = float(lng)
                 active_trip.duration_minutes = round(
-                    (now - active_trip.started_at).total_seconds() / 60, 1
+                    (now - make_aware(active_trip.started_at)).total_seconds() / 60, 1
                 )
         
         geofence_events = detect_geofence_events(user_id, float(lat), float(lng))
         
-        today = now.date()
+        today = datetime.now(timezone.utc).date()
         snapshot = AnalyticsSnapshot.query.filter_by(user_id=user_id, date=today).first()
         if snapshot:
             snapshot.locations_count += 1
@@ -1277,7 +1288,7 @@ def update_location():
                     'lat': loc.lat,
                     'lng': loc.lng,
                     'speed': loc.speed,
-                    'timestamp': loc.timestamp
+                    'timestamp': make_aware(loc.timestamp)
                 } for loc in reversed(recent_locs)
             ]
             analysis = analyze_movement(locs_dict)
@@ -1364,7 +1375,9 @@ def get_my_current_location():
         if not location:
             return jsonify({'status': 'no_data', 'location': None})
         
-        time_diff = datetime.now(timezone.utc) - location.updated_at
+        # ✅ إصلاح التواريخ
+        updated_at = make_aware(location.updated_at)
+        time_diff = datetime.now(timezone.utc) - updated_at
         status = 'offline' if time_diff > timedelta(seconds=30) else 'online'
         
         return jsonify({
@@ -1766,7 +1779,10 @@ def end_trip():
         
         trip.is_active = False
         trip.ended_at = datetime.now(timezone.utc)
-        trip.duration_minutes = round((trip.ended_at - trip.started_at).total_seconds() / 60, 1)
+        # ✅ إصلاح التواريخ
+        started = make_aware(trip.started_at)
+        ended = make_aware(trip.ended_at)
+        trip.duration_minutes = round((ended - started).total_seconds() / 60, 1)
         db.session.commit()
         return jsonify({'status': 'success', 'trip': trip.to_dict()})
     except Exception as e:
@@ -1877,7 +1893,7 @@ def movement_pattern():
         if len(recent) < 5:
             return jsonify({'status': 'success', 'analysis': {'pattern': 'غير كاف', 'confidence': 0}})
         
-        locs = [{'lat': l.lat, 'lng': l.lng, 'speed': l.speed, 'timestamp': l.timestamp} for l in reversed(recent)]
+        locs = [{'lat': l.lat, 'lng': l.lng, 'speed': l.speed, 'timestamp': make_aware(l.timestamp)} for l in reversed(recent)]
         analysis = analyze_movement(locs)
         return jsonify({'status': 'success', 'analysis': analysis})
     except Exception as e:
