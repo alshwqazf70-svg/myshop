@@ -329,8 +329,48 @@
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="closeModal('menuModal'); showModal('loginModal')">🚪 تسجيل الدخول</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="closeModal('menuModal'); showModal('registerModal')">✨ إنشاء حساب</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="shareLocation()">🔗 مشاركة موقعي</button>
+                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="showDeliveryForm()">🚚 إرسال موقع تسليم</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="navigateTo()">🧭 تحديد مسار</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="logout()">👋 تسجيل الخروج</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ مودال إرسال موقع التسليم -->
+    <div id="deliveryModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeModal('deliveryModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 1.3rem; font-weight: 700;">🚚 إرسال موقع التسليم</h2>
+                <button class="modal-close-btn" onclick="closeModal('deliveryModal')">✕</button>
+            </div>
+            <p style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 16px;">أدخل موقع التسليم واسمه لإنشاء رابط يفتحه السائق</p>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">📦 اسم المكان</label>
+                <input type="text" id="deliveryPlaceName" class="glass-input" placeholder="مثال: مستودع الرياض">
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">📍 خط العرض (Lat)</label>
+                    <input type="number" id="deliveryLat" class="glass-input" placeholder="24.7136" step="any" dir="ltr">
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">📍 خط الطول (Lng)</label>
+                    <input type="number" id="deliveryLng" class="glass-input" placeholder="46.6753" step="any" dir="ltr">
+                </div>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <button class="glass-btn" onclick="useCurrentLocationForDelivery()" style="width: 100%; font-size: 11px; justify-content: center;">📍 استخدام موقعي الحالي</button>
+            </div>
+            <button class="neon-btn" onclick="createDeliveryLink()" style="width: 100%; padding: 12px; margin-bottom: 12px;">
+                🚚 إنشاء رابط التسليم
+            </button>
+            <div id="deliveryLinkResult" style="display: none; margin-top: 8px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">🔗 رابط التسليم (أرسله للسائق):</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="deliveryLinkInput" class="glass-input" readonly style="font-size: 11px;" dir="ltr">
+                    <button class="neon-btn" onclick="copyDeliveryLink()" style="padding: 8px 12px; font-size: 11px; white-space: nowrap;">📋 نسخ</button>
+                </div>
             </div>
         </div>
     </div>
@@ -692,7 +732,6 @@
             document.getElementById('remainingTime').textContent = activeRoute.duration_minutes;
             document.getElementById('activeRouteInfo').style.display = 'block';
             
-            // رسم المسار على الخريطة
             if (activeRoute.geometry && cesiumViewer && use3D) {
                 drawRouteOnCesium(activeRoute.geometry);
             }
@@ -752,6 +791,56 @@
             ctx.fillStyle = 'black'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('📦', 24, 24);
             return canvas.toDataURL();
+        }
+
+        // ==================== إرسال موقع التسليم ====================
+        function showDeliveryForm() {
+            closeModal('menuModal');
+            showModal('deliveryModal');
+            
+            if (currentPosition) {
+                document.getElementById('deliveryLat').value = currentPosition.lat;
+                document.getElementById('deliveryLng').value = currentPosition.lng;
+            }
+        }
+
+        function useCurrentLocationForDelivery() {
+            if (!currentPosition) {
+                showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning');
+                return;
+            }
+            document.getElementById('deliveryLat').value = currentPosition.lat;
+            document.getElementById('deliveryLng').value = currentPosition.lng;
+            showNotification('✅', 'تم استخدام موقعك الحالي', 'success');
+        }
+
+        function createDeliveryLink() {
+            var lat = document.getElementById('deliveryLat').value.trim();
+            var lng = document.getElementById('deliveryLng').value.trim();
+            var name = document.getElementById('deliveryPlaceName').value.trim() || 'موقع التسليم';
+            
+            if (!lat || !lng) {
+                showNotification('❌', 'أدخل الإحداثيات', 'error');
+                return;
+            }
+            
+            var url = window.location.origin + '/?lat=' + lat + '&lng=' + lng + '&name=' + encodeURIComponent(name);
+            
+            document.getElementById('deliveryLinkInput').value = url;
+            document.getElementById('deliveryLinkResult').style.display = 'block';
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(function() {
+                    showNotification('✅', 'تم نسخ رابط التسليم! أرسله للسائق', 'success');
+                });
+            }
+        }
+
+        function copyDeliveryLink() {
+            var input = document.getElementById('deliveryLinkInput');
+            input.select();
+            document.execCommand('copy');
+            showNotification('✅', 'تم نسخ الرابط', 'success');
         }
 
         // ==================== تهيئة SocketIO ====================
@@ -816,7 +905,6 @@
             var isOnline = data.is_online !== false;
             var secondsAgo = parseInt(data.seconds_ago) || 0;
             
-            // ✅ تحديث لوحة المعلومات العلوية للمشاهد
             if (isGuest || isShareViewer) {
                 var sp = document.getElementById('speedDisplay');
                 var hd = document.getElementById('headingDisplay');
@@ -842,7 +930,6 @@
                 if (dotEl) { dotEl.style.color = isOnline ? '#00ff88' : '#ffaa00'; }
             }
             
-            // ✅ دعم Cesium 3D
             if (cesiumViewer && use3D) {
                 var key = 'user_' + data.user_id;
                 var entity = cesiumViewer.entities.getById(key);
@@ -867,7 +954,6 @@
                 }
             }
             
-            // ✅ دعم Leaflet 2D
             if (leafletMap) {
                 var markerKey = 'leaflet_user_' + data.user_id;
                 
@@ -980,7 +1066,6 @@
             if (leafletMap && userMarker) { userMarker.setLatLng([lat, lng]); if (isTracking && autoFollowUser) leafletMap.panTo([lat, lng], { animate: true, duration: 0.5 }); }
             updateDisplayInfo(lat, lng, speed, heading, accuracy);
 
-            // ✅ تحديث المسافة المتبقية للسائق
             if (driverTracking && activeRoute && deliveryTarget) { updateRemainingInfo(); }
 
             var shouldSend = !lastSentPosition || haversineDistance(lastSentPosition.lat, lastSentPosition.lng, lat, lng) > 0.005;
