@@ -848,7 +848,7 @@ def handle_join_group(data):
 
 @socketio.on('join_share_room')
 def handle_join_share(data):
-    """✅ انضمام إلى غرفة مشاركة - يرسل آخر موقع حتى لو المالك غير متصل"""
+    """✅ انضمام إلى غرفة مشاركة - متاح للجميع"""
     room_id = data.get('room_id')
     print(f'🔗 join_share_room called with room_id: {room_id}')
     
@@ -863,12 +863,9 @@ def handle_join_share(data):
             user = User.query.get(room.creator_id)
             
             if current_location and user:
-                # ✅ حساب الوقت المنقضي منذ آخر تحديث
                 now = datetime.now(timezone.utc)
                 updated_at = make_aware(current_location.updated_at)
                 seconds_ago = int((now - updated_at).total_seconds())
-                
-                # ✅ تحديد إذا كان المالك متصل أم لا
                 is_online = seconds_ago < 30
                 
                 socketio.emit('location_update', {
@@ -898,8 +895,7 @@ def handle_ping():
 def before_request():
     request.start_time = time.time()
     
-    # ✅ السماح لمسارات المشاركة بدون User-Agent
-    if request.path.startswith('/share/') or request.path.startswith('/api/share/'):
+    if request.path.startswith('/share/') or request.path.startswith('/api/share/') or request.path.startswith('/api/navigation/'):
         return
     
     user_agent = request.headers.get('User-Agent', '')
@@ -935,10 +931,9 @@ def shutdown_session(exception=None):
 def index():
     return render_template('index.html')
 
-# ✅ صفحة المشاركة - لا تحتاج تسجيل دخول
 @app.route('/share/<room_id>')
 def share_view(room_id):
-    """صفحة المشاركة العامة - متاحة للجميع"""
+    """صفحة المشاركة العامة"""
     room = Room.query.filter_by(room_id=room_id, is_active=True).first()
     if not room:
         return render_template('index.html', error='رابط المشاركة غير صالح')
@@ -993,6 +988,63 @@ def get_shared_location(room_id):
     
     print(f'⚠️ لا يوجد موقع حالي')
     return jsonify({'status': 'no_data', 'message': 'لا يوجد موقع حالي'})
+
+# ====== API الملاحة العامة (بدون JWT) ======
+@app.route('/api/navigation/public', methods=['POST'])
+def get_public_route():
+    """حساب مسارات متعددة - لا يحتاج تسجيل دخول"""
+    try:
+        data = request.get_json()
+        start_lat = data.get('start_lat')
+        start_lng = data.get('start_lng')
+        end_lat = data.get('end_lat')
+        end_lng = data.get('end_lng')
+        
+        if not all([start_lat, start_lng, end_lat, end_lng]):
+            return jsonify({'error': 'جميع الإحداثيات مطلوبة'}), 400
+        
+        if not is_valid_coordinates(start_lat, start_lng) or not is_valid_coordinates(end_lat, end_lng):
+            return jsonify({'error': 'إحداثيات غير صالحة'}), 400
+        
+        url = f"https://router.project-osrm.org/route/v1/driving/{start_lng},{start_lat};{end_lng},{end_lat}"
+        url += "?overview=full&geometries=geojson&steps=true&alternatives=true"
+        
+        response = requests.get(url, timeout=10, headers={'User-Agent': 'GeoLegend/3.0'})
+        
+        routes = []
+        
+        if response.status_code == 200:
+            route_data = response.json()
+            if route_data.get('code') == 'Ok' and route_data.get('routes'):
+                for i, route in enumerate(route_data['routes']):
+                    route_name = 'أسرع طريق' if i == 0 else ('طريق بديل ' + str(i))
+                    if i == 1 and len(route_data['routes']) > 2:
+                        route_name = 'أقصر طريق'
+                    
+                    routes.append({
+                        'id': i,
+                        'name': route_name,
+                        'distance_km': round(route['distance'] / 1000, 2),
+                        'duration_minutes': round(route['duration'] / 60, 1),
+                        'geometry': route.get('geometry'),
+                        'source': 'osrm'
+                    })
+        
+        if not routes:
+            distance = haversine(start_lat, start_lng, end_lat, end_lng)
+            duration = (distance / 50) * 60
+            routes.append({
+                'id': 0,
+                'name': 'المسار المباشر',
+                'distance_km': round(distance, 2),
+                'duration_minutes': round(duration, 1),
+                'geometry': None,
+                'source': 'local'
+            })
+        
+        return jsonify({'status': 'success', 'routes': routes})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ====== API المصادقة ======
 @app.route('/api/auth/register', methods=['POST'])
@@ -1230,7 +1282,6 @@ def update_location():
             .order_by(LocationHistory.timestamp.desc()).first()
         
         if last_history:
-            # ✅ إصلاح: التأكد من أن التاريخين متوافقين
             last_time = make_aware(last_history.timestamp)
             time_diff = (now - last_time).total_seconds()
             distance = haversine(last_history.lat, last_history.lng, float(lat), float(lng))
@@ -1336,6 +1387,8 @@ def update_location():
             'battery_level': float(battery_level),
             'device_type': sanitize_input(device_type),
             'name': user.name if user else 'مستخدم',
+            'is_online': True,
+            'seconds_ago': 0,
             'timestamp': now.isoformat()
         }
         
@@ -1382,7 +1435,6 @@ def get_my_current_location():
         if not location:
             return jsonify({'status': 'no_data', 'location': None})
         
-        # ✅ إصلاح التواريخ
         updated_at = make_aware(location.updated_at)
         time_diff = datetime.now(timezone.utc) - updated_at
         status = 'offline' if time_diff > timedelta(seconds=30) else 'online'
@@ -1397,54 +1449,7 @@ def get_my_current_location():
         app.logger.error(f'Get current location error: {str(e)}')
         return jsonify({'error': 'حدث خطأ'}), 500
 
-@app.route('/api/location/accuracy', methods=['GET'])
-@jwt_required()
-def get_location_accuracy():
-    try:
-        user_id = int(get_jwt_identity())
-        location = CurrentLocation.query.filter_by(user_id=user_id).first()
-        
-        if not location:
-            return jsonify({'status': 'no_data'}), 404
-        
-        recent = LocationHistory.query.filter_by(user_id=user_id)\
-            .order_by(LocationHistory.timestamp.desc()).limit(20).all()
-        
-        score = 100
-        if len(recent) >= 2:
-            dists = [
-                haversine(
-                    recent[i-1].lat, recent[i-1].lng,
-                    recent[i].lat, recent[i].lng
-                ) for i in range(1, len(recent))
-            ]
-            avg = sum(dists) / len(dists)
-            if avg > 0.1:
-                score = max(30, 100 - (avg * 1000))
-            else:
-                score = 95
-        
-        if score > 90:
-            quality = 'ممتاز'
-        elif score > 70:
-            quality = 'جيد'
-        elif score > 50:
-            quality = 'مقبول'
-        else:
-            quality = 'ضعيف'
-        
-        return jsonify({
-            'status': 'success',
-            'accuracy_score': round(score, 1),
-            'gps_quality': quality,
-            'samples_count': len(recent),
-            'device_accuracy': location.accuracy
-        })
-    except Exception as e:
-        app.logger.error(f'Location accuracy error: {str(e)}')
-        return jsonify({'error': 'حدث خطأ'}), 500
-
-# ====== API الملاحة ======
+# ====== API الملاحة (مع JWT) ======
 @app.route('/api/navigation/route', methods=['POST'])
 @jwt_required()
 @cache.cached(timeout=300, query_string=True)
@@ -1463,59 +1468,38 @@ def get_navigation_route():
         if not is_valid_coordinates(start_lat, start_lng) or not is_valid_coordinates(end_lat, end_lng):
             return jsonify({'error': 'إحداثيات غير صالحة'}), 400
         
-        profile_map = {
-            'driving': 'driving',
-            'walking': 'walking',
-            'cycling': 'cycling'
-        }
+        profile_map = {'driving': 'driving', 'walking': 'walking', 'cycling': 'cycling'}
         profile = profile_map.get(mode, 'driving')
         
         url = f"https://router.project-osrm.org/route/v1/{profile}/{start_lng},{start_lat};{end_lng},{end_lat}"
-        url += "?overview=full&geometries=geojson&steps=true&alternatives=false"
+        url += "?overview=full&geometries=geojson&steps=true&alternatives=true"
         
         response = requests.get(url, timeout=10, headers={'User-Agent': 'GeoLegend/3.0'})
         
+        routes = []
         if response.status_code == 200:
             route_data = response.json()
             if route_data.get('code') == 'Ok' and route_data.get('routes'):
-                route = route_data['routes'][0]
-                return jsonify({
-                    'status': 'success',
-                    'distance_km': round(route['distance'] / 1000, 2),
-                    'duration_minutes': round(route['duration'] / 60, 1),
-                    'geometry': route.get('geometry'),
-                    'source': 'osrm',
-                    'mode': mode,
-                    'steps': [
-                        {
-                            'instruction': step.get('name', ''),
-                            'distance': round(step['distance'] / 1000, 2),
-                            'duration': round(step['duration'] / 60, 1)
-                        } for step in route.get('legs', [{}])[0].get('steps', [])[:5]
-                    ]
-                })
+                for i, route in enumerate(route_data['routes']):
+                    route_name = 'أسرع طريق' if i == 0 else ('طريق بديل ' + str(i))
+                    routes.append({
+                        'id': i, 'name': route_name,
+                        'distance_km': round(route['distance'] / 1000, 2),
+                        'duration_minutes': round(route['duration'] / 60, 1),
+                        'geometry': route.get('geometry'), 'source': 'osrm'
+                    })
         
-        distance = haversine(start_lat, start_lng, end_lat, end_lng)
-        speed_estimates = {'driving': 50, 'walking': 5, 'cycling': 15}
-        avg_speed = speed_estimates.get(mode, 50)
-        duration = (distance / avg_speed) * 60
+        if not routes:
+            distance = haversine(start_lat, start_lng, end_lat, end_lng)
+            duration = (distance / 50) * 60
+            routes.append({
+                'id': 0, 'name': 'المسار المباشر',
+                'distance_km': round(distance, 2),
+                'duration_minutes': round(duration, 1),
+                'geometry': None, 'source': 'local'
+            })
         
-        return jsonify({
-            'status': 'success',
-            'distance_km': round(distance, 2),
-            'duration_minutes': round(duration, 1),
-            'geometry': None,
-            'source': 'local_calculation',
-            'mode': mode
-        })
-    except requests.Timeout:
-        distance = haversine(start_lat, start_lng, end_lat, end_lng)
-        return jsonify({
-            'status': 'success',
-            'distance_km': round(distance, 2),
-            'duration_minutes': round((distance / 50) * 60, 1),
-            'source': 'local_fallback'
-        })
+        return jsonify({'status': 'success', 'routes': routes})
     except Exception as e:
         app.logger.error(f'Navigation error: {str(e)}')
         return jsonify({'error': 'حدث خطأ في حساب المسار'}), 500
@@ -1742,7 +1726,10 @@ def create_share():
                 'lng': current_location.lng,
                 'speed': current_location.speed,
                 'heading': current_location.heading,
+                'accuracy': current_location.accuracy,
                 'name': user.name,
+                'is_online': True,
+                'seconds_ago': 0,
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }, room=f'share_{room.room_id}')
         
@@ -1786,7 +1773,6 @@ def end_trip():
         
         trip.is_active = False
         trip.ended_at = datetime.now(timezone.utc)
-        # ✅ إصلاح التواريخ
         started = make_aware(trip.started_at)
         ended = make_aware(trip.ended_at)
         trip.duration_minutes = round((ended - started).total_seconds() / 60, 1)
@@ -1958,129 +1944,55 @@ def manifest():
         "theme_color": "#00ffff",
         "description": "أقوى نظام تتبع مباشر ثلاثي الأبعاد",
         "icons": [
-            {
-                "src": "/static/icons/icon-192.png",
-                "sizes": "192x192",
-                "type": "image/png"
-            },
-            {
-                "src": "/static/icons/icon-512.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
+            {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
         ]
     })
 
 @app.route('/sw.js')
 def service_worker():
-
     sw_code = """
 const CACHE_NAME = 'geolegend-v6';
-
 self.addEventListener('install', (event) => {
     self.skipWaiting();
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll([
-                '/',
-                '/manifest.json'
-            ]);
+    event.waitUntil(caches.open(CACHE_NAME).then((cache) => { return cache.addAll(['/', '/manifest.json']); }));
+});
+self.addEventListener('activate', (event) => {
+    event.waitUntil(Promise.all([
+        caches.keys().then((cacheNames) => {
+            return Promise.all(cacheNames.map((cacheName) => {
+                if (cacheName.startsWith('geolegend-') && cacheName !== CACHE_NAME) { return caches.delete(cacheName); }
+            }));
+        }),
+        self.clients.claim()
+    ]));
+});
+self.addEventListener('fetch', (event) => {
+    if (event.request.method !== 'GET') return;
+    if (event.request.url.includes('/api/')) { return; }
+    const url = new URL(event.request.url);
+    if (url.origin !== location.origin) { return; }
+    event.respondWith(
+        fetch(event.request).then((response) => {
+            if (!response || response.status !== 200) { return response; }
+            const contentType = response.headers.get('content-type');
+            if (contentType && (contentType.includes('text/html') || contentType.includes('text/css') || contentType.includes('javascript') || contentType.includes('image'))) {
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then((cache) => { cache.put(event.request, responseClone); });
+            }
+            return response;
+        }).catch(async () => {
+            const cachedResponse = await caches.match(event.request);
+            if (cachedResponse) { return cachedResponse; }
+            return caches.match('/');
         })
     );
 });
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        Promise.all([
-            caches.keys().then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cacheName) => {
-                        if (
-                            cacheName.startsWith('geolegend-') &&
-                            cacheName !== CACHE_NAME
-                        ) {
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            }),
-            self.clients.claim()
-        ])
-    );
-});
-
-self.addEventListener('fetch', (event) => {
-
-    if (event.request.method !== 'GET') return;
-
-    if (event.request.url.includes('/api/')) {
-        return;
-    }
-
-    const url = new URL(event.request.url);
-
-    if (url.origin !== location.origin) {
-        return;
-    }
-
-    event.respondWith(
-
-        fetch(event.request)
-
-            .then((response) => {
-
-                if (!response || response.status !== 200) {
-                    return response;
-                }
-
-                const contentType = response.headers.get('content-type');
-
-                if (
-                    contentType &&
-                    (
-                        contentType.includes('text/html') ||
-                        contentType.includes('text/css') ||
-                        contentType.includes('javascript') ||
-                        contentType.includes('image')
-                    )
-                ) {
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseClone);
-                    });
-                }
-
-                return response;
-
-            })
-
-            .catch(async () => {
-
-                const cachedResponse = await caches.match(event.request);
-
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-
-                return caches.match('/');
-
-            })
-
-    );
-
-});
 """
-
-    response = app.response_class(
-        response=sw_code,
-        status=200,
-        mimetype='application/javascript'
-    )
-
+    response = app.response_class(response=sw_code, status=200, mimetype='application/javascript')
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
-
     return response
 
 @app.route('/favicon.ico')
@@ -2116,9 +2028,7 @@ def request_entity_too_large(error):
 
 @app.errorhandler(429)
 def rate_limit_exceeded(error):
-    return jsonify({
-        'error': 'تجاوزت الحد المسموح من الطلبات. حاول لاحقاً'
-    }), 429
+    return jsonify({'error': 'تجاوزت الحد المسموح من الطلبات. حاول لاحقاً'}), 429
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -2142,25 +2052,11 @@ if __name__ == '__main__':
     print(f"""
     ╔══════════════════════════════════════════════╗
     ║     🌟 GeoLegend Ultimate 3D System        ║
-    ║                                            ║
     ║  Port: {port}                               ║
-    ║  Debug: {debug}                               ║
-    ║                                            ║
-    ║  ✅ Live Tracking     ✅ Navigation        ║
-    ║  ✅ Family System     ✅ Geofencing        ║
-    ║  ✅ AI Analysis       ✅ Friends           ║
-    ║  ✅ Trips             ✅ Groups            ║
-    ║  ✅ SOS Alerts        ✅ Notifications     ║
-    ║  ✅ Share Location    ✅ Guest Access      ║
-    ║  ✅ Rate Limiting     ✅ Brute Force Prot  ║
-    ║  ✅ Caching           ✅ Logging           ║
+    ║  ✅ Tracking  ✅ Share  ✅ Navigate        ║
+    ║  ✅ Guest     ✅ SOS    ✅ Friends         ║
+    ║  ✅ Family    ✅ Trips  ✅ Geofence        ║
     ╚══════════════════════════════════════════════╝
     """)
     
-    socketio.run(
-        app,
-        debug=debug,
-        host='0.0.0.0',
-        port=port,
-        allow_unsafe_werkzeug=True
-    )
+    socketio.run(app, debug=debug, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
