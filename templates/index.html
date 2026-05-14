@@ -131,6 +131,10 @@
         .share-view-box { background: rgba(20, 20, 50, 0.95); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 2px solid rgba(0, 255, 255, 0.4); border-radius: 24px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 0 60px rgba(0, 255, 255, 0.3); animation: scaleIn 0.5s ease-out; }
         .share-view-box .icon-large { font-size: 64px; display: block; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
 
+        .route-card { background: rgba(20, 20, 50, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.3s ease; }
+        .route-card:hover { border-color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); }
+        .route-card.selected { border-color: #00ff88; background: rgba(0, 255, 136, 0.1); }
+
         .loading-screen { position: fixed; inset: 0; background: radial-gradient(ellipse at center, #0a0a1a 0%, #000000 100%); display: flex; align-items: center; justify-content: center; z-index: 10000; transition: opacity 0.8s ease, visibility 0.8s ease; }
         .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .loader-spinner { width: 80px; height: 80px; border: 4px solid rgba(255, 255, 255, 0.1); border-top-color: var(--neon-cyan); border-right-color: var(--neon-purple); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -192,7 +196,7 @@
     <div id="cesiumContainer"></div>
     <div id="leafletContainer"><div id="map"></div></div>
 
-    <!-- ✅ نافذة عرض الموقع المشترك -->
+    <!-- نافذة عرض الموقع المشترك -->
     <div id="shareViewOverlay" class="share-view-overlay" style="display: none;">
         <div class="share-view-box">
             <span class="icon-large">📍</span>
@@ -204,6 +208,26 @@
             <button class="glass-btn" onclick="closeShareView()" style="width: 100%; margin-top: 10px;">
                 ✕ إغلاق
             </button>
+        </div>
+    </div>
+
+    <!-- ✅ نافذة اختيار المسار للسائق -->
+    <div id="routeSelectionPanel" style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; display: none; width: 90%; max-width: 400px;">
+        <div class="glass-card" style="padding: 16px; text-align: center;">
+            <h3 style="font-size: 14px; margin-bottom: 4px;">🧭 اختر المسار المناسب</h3>
+            <p style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 12px;">إلى: <strong id="deliveryName">موقع التسليم</strong></p>
+            <div id="routesList" style="max-height: 200px; overflow-y: auto; margin-bottom: 12px;"></div>
+            <div id="activeRouteInfo" style="display: none; font-size: 12px; margin-bottom: 12px; background: rgba(0,255,136,0.1); padding: 10px; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-around;">
+                    <div>📏 <strong id="remainingDistance">--</strong> كم</div>
+                    <div>⏱️ <strong id="remainingTime">--</strong> دقيقة</div>
+                    <div>🏎️ <strong id="currentSpeed2">0</strong> كم/س</div>
+                </div>
+            </div>
+            <button class="neon-btn" onclick="calculateAllRoutes()" style="width: 100%; font-size: 12px; padding: 10px; margin-bottom: 6px;">
+                🧭 حساب المسارات
+            </button>
+            <button class="glass-btn" onclick="closeRoutePanel()" style="width: 100%; font-size: 12px;">✕ إغلاق</button>
         </div>
     </div>
 
@@ -349,6 +373,12 @@
         var sharedRoomId = null;
         var isShareViewer = false;
         var isGuest = false;
+        var deliveryTarget = null;
+        var routeLine = null;
+        var activeRoute = null;
+        var allRoutes = [];
+        var driverTracking = false;
+        var lastRemainingUpdate = 0;
 
         // ====== Cooldown System ======
         var cooldowns = {};
@@ -402,8 +432,9 @@
                 }
             }, 200);
 
-            // ✅ الترتيب مهم: اكتشف الرابط أولاً
+            // ✅ الترتيب مهم جداً
             checkForShareLink();
+            checkForDeliveryLink();
             initCesiumMap();
             initSocketIO();
             restoreUserState();
@@ -491,17 +522,14 @@
                 isGuest = true;
                 console.log('🟢 [DEBUG] وضع الضيف مفعل - sharedRoomId: ' + sharedRoomId);
                 
-                // ✅ إخفاء أزرار التحكم للضيف
                 document.getElementById('sideControls').style.display = 'none';
                 document.getElementById('bottomNav').style.display = 'none';
                 
-                // ✅ إخفاء شاشة التحميل سريعاً
                 setTimeout(function() {
                     var loadingScreen = document.getElementById('loadingScreen');
                     if (loadingScreen) loadingScreen.classList.add('hidden');
                 }, 1000);
                 
-                // ✅ إظهار نافذة المشاركة
                 setTimeout(function() {
                     var overlay = document.getElementById('shareViewOverlay');
                     if (overlay) { overlay.style.display = 'flex'; }
@@ -520,11 +548,9 @@
                 return;
             }
             
-            // ✅ الانضمام إلى غرفة المشاركة عبر SocketIO
             socket.emit('join_share_room', { room_id: sharedRoomId });
             console.log('🟢 [DEBUG] إرسال join_share_room: ' + sharedRoomId);
             
-            // ✅ أيضاً جلب الموقع عبر API العامة
             fetch('/api/share/' + sharedRoomId + '/location')
                 .then(function(r) { return r.json(); })
                 .then(function(d) {
@@ -536,7 +562,10 @@
                             lng: d.location.lng,
                             speed: d.location.speed,
                             heading: d.location.heading,
-                            name: d.location.name
+                            accuracy: 0,
+                            name: d.location.name,
+                            is_online: false,
+                            seconds_ago: 999
                         });
                         showNotification('✅', 'تم العثور على موقع ' + d.location.name, 'success');
                     }
@@ -553,20 +582,192 @@
             if (overlay) { overlay.style.display = 'none'; }
         }
 
+        // ==================== نظام الملاحة والتسليم ====================
+        function checkForDeliveryLink() {
+            var params = new URLSearchParams(window.location.search);
+            var lat = params.get('lat');
+            var lng = params.get('lng');
+            var name = params.get('name') || 'موقع التسليم';
+            
+            if (lat && lng) {
+                deliveryTarget = {
+                    lat: parseFloat(lat),
+                    lng: parseFloat(lng),
+                    name: decodeURIComponent(name)
+                };
+                
+                console.log('🚚 موقع التسليم:', deliveryTarget);
+                
+                document.getElementById('deliveryName').textContent = deliveryTarget.name;
+                document.getElementById('routeSelectionPanel').style.display = 'block';
+                
+                if (cesiumViewer && use3D) {
+                    var existingDelivery = cesiumViewer.entities.getById('deliveryTarget');
+                    if (existingDelivery) { cesiumViewer.entities.remove(existingDelivery); }
+                    
+                    cesiumViewer.entities.add({
+                        id: 'deliveryTarget',
+                        position: Cesium.Cartesian3.fromDegrees(deliveryTarget.lng, deliveryTarget.lat, 50),
+                        billboard: { image: createDeliveryMarkerImage(), scale: 0.8, verticalOrigin: Cesium.VerticalOrigin.BOTTOM },
+                        label: { text: '📦 ' + deliveryTarget.name, font: '15px Cairo', fillColor: Cesium.Color.YELLOW, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 30) }
+                    });
+                    
+                    cesiumViewer.camera.flyTo({
+                        destination: Cesium.Cartesian3.fromDegrees(deliveryTarget.lng, deliveryTarget.lat, 5000),
+                        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-45), roll: 0 },
+                        duration: 2
+                    });
+                }
+                
+                if (!isTracking && !isGuest) { startTracking(); }
+                driverTracking = true;
+            }
+        }
+
+        function calculateAllRoutes() {
+            if (!deliveryTarget) { showNotification('❌', 'لا يوجد موقع تسليم', 'error'); return; }
+            
+            if (!currentPosition) {
+                showNotification('📍', 'جارٍ تحديد موقعك...', 'info');
+                if (!isTracking) { startTracking(); }
+                setTimeout(function() { calculateAllRoutes(); }, 3000);
+                return;
+            }
+            
+            showNotification('🧭', 'جارٍ حساب المسارات...', 'info');
+            
+            fetch('/api/navigation/public', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    start_lat: currentPosition.lat,
+                    start_lng: currentPosition.lng,
+                    end_lat: deliveryTarget.lat,
+                    end_lng: deliveryTarget.lng
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'success' && d.routes) {
+                    allRoutes = d.routes;
+                    displayRoutesList(d.routes);
+                }
+            })
+            .catch(function() { showNotification('❌', 'فشل حساب المسارات', 'error'); });
+        }
+
+        function displayRoutesList(routes) {
+            var container = document.getElementById('routesList');
+            if (!container) return;
+            
+            var html = '';
+            for (var i = 0; i < routes.length; i++) {
+                var route = routes[i];
+                var selectedClass = (activeRoute && activeRoute.id === route.id) ? ' selected' : '';
+                html += '<div class="route-card' + selectedClass + '" onclick="selectRoute(' + route.id + ')" style="padding:10px;margin-bottom:6px;cursor:pointer;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+                html += '<strong>' + route.name + '</strong>';
+                html += '<span style="font-size:11px;color:#00ff88;">📏 ' + route.distance_km + ' كم</span>';
+                html += '</div>';
+                html += '<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px;">⏱️ الوقت المقدر: ' + route.duration_minutes + ' دقيقة</div>';
+                html += '</div>';
+            }
+            container.innerHTML = html;
+            showNotification('✅', 'تم العثور على ' + routes.length + ' مسارات', 'success');
+        }
+
+        function selectRoute(routeId) {
+            for (var i = 0; i < allRoutes.length; i++) {
+                if (allRoutes[i].id === routeId) {
+                    activeRoute = allRoutes[i];
+                    break;
+                }
+            }
+            
+            if (!activeRoute) return;
+            
+            console.log('🚚 تم اختيار المسار:', activeRoute.name);
+            
+            document.getElementById('remainingDistance').textContent = activeRoute.distance_km;
+            document.getElementById('remainingTime').textContent = activeRoute.duration_minutes;
+            document.getElementById('activeRouteInfo').style.display = 'block';
+            
+            // رسم المسار على الخريطة
+            if (activeRoute.geometry && cesiumViewer && use3D) {
+                drawRouteOnCesium(activeRoute.geometry);
+            }
+            
+            displayRoutesList(allRoutes);
+            showNotification('✅', 'تم اختيار: ' + activeRoute.name, 'success');
+        }
+
+        function drawRouteOnCesium(geometry) {
+            if (!geometry || !geometry.coordinates) return;
+            
+            if (routeLine) { cesiumViewer.entities.remove(routeLine); }
+            
+            var coordinates = geometry.coordinates;
+            var positions = [];
+            for (var i = 0; i < coordinates.length; i++) {
+                positions.push(coordinates[i][0], coordinates[i][1]);
+            }
+            
+            routeLine = cesiumViewer.entities.add({
+                polyline: {
+                    positions: Cesium.Cartesian3.fromDegreesArray(positions),
+                    width: 5,
+                    material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.2, color: Cesium.Color.YELLOW }),
+                    clampToGround: true
+                }
+            });
+        }
+
+        function updateRemainingInfo() {
+            if (!activeRoute || !deliveryTarget || !currentPosition) return;
+            
+            if (Date.now() - lastRemainingUpdate < 5000) return;
+            lastRemainingUpdate = Date.now();
+            
+            var remainingDist = haversineDistance(
+                currentPosition.lat, currentPosition.lng,
+                deliveryTarget.lat, deliveryTarget.lng
+            );
+            
+            var speed = currentPosition.speed || 0;
+            var remainingTime = speed > 0 ? (remainingDist / speed) * 60 : 0;
+            
+            document.getElementById('remainingDistance').textContent = remainingDist.toFixed(1);
+            document.getElementById('remainingTime').textContent = Math.round(remainingTime);
+            document.getElementById('currentSpeed2').textContent = Math.round(speed);
+        }
+
+        function closeRoutePanel() {
+            document.getElementById('routeSelectionPanel').style.display = 'none';
+        }
+
+        function createDeliveryMarkerImage() {
+            var canvas = document.createElement('canvas'); canvas.width = 48; canvas.height = 48; var ctx = canvas.getContext('2d');
+            ctx.beginPath(); ctx.arc(24, 24, 22, 0, 2 * Math.PI); ctx.fillStyle = '#ffcc00'; ctx.fill();
+            ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = 'black'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('📦', 24, 24);
+            return canvas.toDataURL();
+        }
+
         // ==================== تهيئة SocketIO ====================
         function initSocketIO() {
             try {
                 console.log('🟡 [DEBUG] initSocketIO - isGuest: ' + isGuest);
                 
                 socket = io.connect(window.location.origin, {
-			    transports: ['polling', 'websocket'],
-			    secure: true,
-			    reconnection: true,
-			    reconnectionAttempts: Infinity,
-			    reconnectionDelay: 1000,
-			    reconnectionDelayMax: 5000,
-			    timeout: 20000
-			});
+                    transports: ['polling', 'websocket'],
+                    secure: true,
+                    reconnection: true,
+                    reconnectionAttempts: Infinity,
+                    reconnectionDelay: 1000,
+                    reconnectionDelayMax: 5000,
+                    timeout: 20000
+                });
 
                 socket.on('connect', function() {
                     console.log('🟢 [DEBUG] SocketIO متصل - isGuest: ' + isGuest);
@@ -604,100 +805,89 @@
         }
 
         function updateOtherUserMarker(data) {
-		    console.log('🟡 [DEBUG] updateOtherUserMarker:', data);
-		    
-		    // ✅ تحويل الإحداثيات إلى أرقام
-		    var lat = parseFloat(data.lat);
-		    var lng = parseFloat(data.lng);
-		    var name = data.name || 'مستخدم';
-		    var speed = parseFloat(data.speed) || 0;
-		    var heading = parseFloat(data.heading) || 0;
-		    var accuracy = parseFloat(data.accuracy) || 0;
-		    var isOnline = data.is_online !== false;
-		    var secondsAgo = parseInt(data.seconds_ago) || 0;
-		    
-		    // ✅ تحديث لوحة المعلومات العلوية للمشاهد
-		    if (isGuest || isShareViewer) {
-		        var sp = document.getElementById('speedDisplay');
-		        var hd = document.getElementById('headingDisplay');
-		        var ac = document.getElementById('accuracyDisplay');
-		        var statusEl = document.getElementById('trackingStatus');
-		        var dotEl = document.getElementById('statusDot');
-		        
-		        if (sp) sp.textContent = speed.toFixed(1);
-		        if (hd) hd.textContent = Math.round(heading);
-		        if (ac) ac.textContent = accuracy ? Math.round(accuracy) : '--';
-		        
-		        if (statusEl) {
-		            if (isOnline) {
-		                statusEl.textContent = '📡 ' + name + ' - مباشر';
-		                statusEl.style.color = '#00ff88';
-		            } else {
-		                var agoText = secondsAgo < 60 ? secondsAgo + ' ثانية' : Math.floor(secondsAgo / 60) + ' دقيقة';
-		                statusEl.textContent = '⏰ ' + name + ' - آخر ظهور منذ ' + agoText;
-		                statusEl.style.color = '#ffaa00';
-		            }
-		        }
-		        
-		        if (dotEl) {
-		            dotEl.style.color = isOnline ? '#00ff88' : '#ffaa00';
-		        }
-		    }
-		    
-		    // ✅ دعم Cesium 3D
-		    if (cesiumViewer && use3D) {
-		        var key = 'user_' + data.user_id;
-		        var entity = cesiumViewer.entities.getById(key);
-		        
-		        if (entity) {
-		            entity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
-		        } else {
-		            cesiumViewer.entities.add({
-		                id: key, name: name,
-		                position: Cesium.Cartesian3.fromDegrees(lng, lat, 50),
-		                billboard: { image: createOtherUserMarkerImage(name), scale: 0.7, verticalOrigin: Cesium.VerticalOrigin.BOTTOM },
-		                label: { text: '📍 ' + name, font: '14px Cairo', fillColor: Cesium.Color.CYAN, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 25) }
-		            });
-		            
-		            // ✅ تحريك الكاميرا للمشاهد
-		            if (isGuest || isShareViewer) {
-		                cesiumViewer.camera.flyTo({
-		                    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
-		                    orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 },
-		                    duration: 2
-		                });
-		            }
-		        }
-		    }
-		    
-		    // ✅ دعم Leaflet 2D
-		    if (leafletMap) {
-		        var markerKey = 'leaflet_user_' + data.user_id;
-		        
-		        if (familyEntities[markerKey]) {
-		            familyEntities[markerKey].setLatLng([lat, lng]);
-		        } else {
-		            var icon = L.divIcon({
-		                html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#ff6600,#ff9900);border-radius:50%;border:3px solid white;box-shadow:0 0 20px rgba(255,102,0,0.8);"></div>',
-		                iconSize: [36, 36],
-		                iconAnchor: [18, 18]
-		            });
-		            
-		            familyEntities[markerKey] = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(leafletMap);
-		            familyEntities[markerKey].bindPopup('<b>📍 ' + name + '</b>');
-		            
-		            // ✅ تحريك الخريطة للمشاهد
-		            if (isGuest || isShareViewer) {
-		                leafletMap.flyTo([lat, lng], 16, { animate: true, duration: 2 });
-		            }
-		        }
-		    }
-		    
-		    // ✅ إشعار للمشاهد
-		    if (isGuest || isShareViewer) {
-		        showNotification('✅', 'تم العثور على موقع ' + name, 'success');
-		    }
-		}
+            console.log('🟡 [DEBUG] updateOtherUserMarker:', data);
+            
+            var lat = parseFloat(data.lat);
+            var lng = parseFloat(data.lng);
+            var name = data.name || 'مستخدم';
+            var speed = parseFloat(data.speed) || 0;
+            var heading = parseFloat(data.heading) || 0;
+            var accuracy = parseFloat(data.accuracy) || 0;
+            var isOnline = data.is_online !== false;
+            var secondsAgo = parseInt(data.seconds_ago) || 0;
+            
+            // ✅ تحديث لوحة المعلومات العلوية للمشاهد
+            if (isGuest || isShareViewer) {
+                var sp = document.getElementById('speedDisplay');
+                var hd = document.getElementById('headingDisplay');
+                var ac = document.getElementById('accuracyDisplay');
+                var statusEl = document.getElementById('trackingStatus');
+                var dotEl = document.getElementById('statusDot');
+                
+                if (sp) sp.textContent = speed.toFixed(1);
+                if (hd) hd.textContent = Math.round(heading);
+                if (ac) ac.textContent = accuracy ? Math.round(accuracy) : '--';
+                
+                if (statusEl) {
+                    if (isOnline) {
+                        statusEl.textContent = '📡 ' + name + ' - مباشر';
+                        statusEl.style.color = '#00ff88';
+                    } else {
+                        var agoText = secondsAgo < 60 ? secondsAgo + ' ثانية' : Math.floor(secondsAgo / 60) + ' دقيقة';
+                        statusEl.textContent = '⏰ ' + name + ' - آخر ظهور منذ ' + agoText;
+                        statusEl.style.color = '#ffaa00';
+                    }
+                }
+                
+                if (dotEl) { dotEl.style.color = isOnline ? '#00ff88' : '#ffaa00'; }
+            }
+            
+            // ✅ دعم Cesium 3D
+            if (cesiumViewer && use3D) {
+                var key = 'user_' + data.user_id;
+                var entity = cesiumViewer.entities.getById(key);
+                
+                if (entity) {
+                    entity.position = Cesium.Cartesian3.fromDegrees(lng, lat, 50);
+                } else {
+                    cesiumViewer.entities.add({
+                        id: key, name: name,
+                        position: Cesium.Cartesian3.fromDegrees(lng, lat, 50),
+                        billboard: { image: createOtherUserMarkerImage(name), scale: 0.7, verticalOrigin: Cesium.VerticalOrigin.BOTTOM },
+                        label: { text: '📍 ' + name, font: '14px Cairo', fillColor: Cesium.Color.CYAN, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 25) }
+                    });
+                    
+                    if (isGuest || isShareViewer) {
+                        cesiumViewer.camera.flyTo({
+                            destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
+                            orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 },
+                            duration: 2
+                        });
+                    }
+                }
+            }
+            
+            // ✅ دعم Leaflet 2D
+            if (leafletMap) {
+                var markerKey = 'leaflet_user_' + data.user_id;
+                
+                if (familyEntities[markerKey]) {
+                    familyEntities[markerKey].setLatLng([lat, lng]);
+                } else {
+                    var icon = L.divIcon({
+                        html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#ff6600,#ff9900);border-radius:50%;border:3px solid white;box-shadow:0 0 20px rgba(255,102,0,0.8);"></div>',
+                        iconSize: [36, 36], iconAnchor: [18, 18]
+                    });
+                    
+                    familyEntities[markerKey] = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(leafletMap);
+                    familyEntities[markerKey].bindPopup('<b>📍 ' + name + '</b>');
+                    
+                    if (isGuest || isShareViewer) { leafletMap.flyTo([lat, lng], 16, { animate: true, duration: 2 }); }
+                }
+            }
+            
+            if (isGuest || isShareViewer) { showNotification('✅', 'تم العثور على موقع ' + name, 'success'); }
+        }
 
         function createOtherUserMarkerImage(initial) {
             var canvas = document.createElement('canvas'); canvas.width = 48; canvas.height = 48; var ctx = canvas.getContext('2d');
@@ -738,7 +928,7 @@
 
         // ==================== تتبع الموقع ====================
         function startTracking() {
-            if (isGuest) { showNotification('⚠️', 'وضع المشاهدة فقط', 'warning'); return; }
+            if (isGuest && !driverTracking) { showNotification('⚠️', 'وضع المشاهدة فقط', 'warning'); return; }
             if (!navigator.geolocation) { showNotification('❌', 'GPS غير مدعوم', 'error'); return; }
             showNotification('📍', 'جارٍ طلب إذن GPS...', 'info');
             
@@ -763,7 +953,7 @@
         }
 
         function stopTracking() { if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; } isTracking = false; updateTrackingUI(false); }
-        function toggleTracking() { if (isGuest) { showNotification('⚠️', 'وضع المشاهدة فقط', 'warning'); return; } if (isTracking) { stopTracking(); } else { startTracking(); } }
+        function toggleTracking() { if (isGuest && !driverTracking) { showNotification('⚠️', 'وضع المشاهدة فقط', 'warning'); return; } if (isTracking) { stopTracking(); } else { startTracking(); } }
 
         function updateTrackingUI(tracking) {
             var btn = document.getElementById('trackingBtnSide'); var icon = document.getElementById('trackingIconSide'); var text = document.getElementById('trackingTextSide');
@@ -777,7 +967,7 @@
             var speed = position.coords.speed ? (position.coords.speed * 3.6) : 0;
             var heading = position.coords.heading || 0; var accuracy = position.coords.accuracy || 0;
 
-            if (accuracy > 50) { console.log('⚠️ تجاهل تحديث ضعيف الدقة'); return; }
+            if (accuracy > 50) { return; }
             if (currentPosition) { var dist = haversineDistance(currentPosition.lat, currentPosition.lng, lat, lng); if (dist < 0.003 && speed < 0.5) { return; } }
 
             currentPosition = { lat: lat, lng: lng, speed: speed.toFixed(1), heading: Math.round(heading), accuracy: Math.round(accuracy) };
@@ -789,6 +979,9 @@
             }
             if (leafletMap && userMarker) { userMarker.setLatLng([lat, lng]); if (isTracking && autoFollowUser) leafletMap.panTo([lat, lng], { animate: true, duration: 0.5 }); }
             updateDisplayInfo(lat, lng, speed, heading, accuracy);
+
+            // ✅ تحديث المسافة المتبقية للسائق
+            if (driverTracking && activeRoute && deliveryTarget) { updateRemainingInfo(); }
 
             var shouldSend = !lastSentPosition || haversineDistance(lastSentPosition.lat, lastSentPosition.lng, lat, lng) > 0.005;
             if (shouldSend) { sendLocationToServer(lat, lng, speed, heading, accuracy); lastSentPosition = { lat: lat, lng: lng }; }
@@ -809,7 +1002,7 @@
         function centerMapOnUser() { if (isOnCooldown('center')) return; if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); return; } autoFollowUser = true; if (cesiumViewer && use3D) { cesiumViewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(currentPosition.lng, currentPosition.lat, 500), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-45), roll: 0 }, duration: 1 }); } if (leafletMap) leafletMap.flyTo([currentPosition.lat, currentPosition.lng], 18, { animate: true, duration: 1 }); }
         function toggleMapLayer() { if (isOnCooldown('mapLayer')) return; currentMapLayer = (currentMapLayer + 1) % mapLayers.length; if (cesiumViewer && use3D) { cesiumViewer.imageryLayers.removeAll(); cesiumViewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({ url: mapLayers[currentMapLayer].url, subdomains: ['a', 'b', 'c', 'd'], maximumLevel: 19 })); } if (leafletMap) { leafletMap.eachLayer(function(l) { if (l instanceof L.TileLayer) leafletMap.removeLayer(l); }); L.tileLayer(mapLayers[currentMapLayer].url, { maxZoom: 19 }).addTo(leafletMap); } showNotification('🗺️', mapLayers[currentMapLayer].name, 'info'); }
         function toggle3DView() { if (!cesiumViewer || !use3D) return; var scene = cesiumViewer.scene; if (scene.mode === Cesium.SceneMode.SCENE3D) { scene.morphTo2D(1); showNotification('🗺️', 'تم التبديل للعرض ثنائي الأبعاد', 'info'); } else { scene.morphTo3D(1); showNotification('🏙️', 'تم التبديل للعرض ثلاثي الأبعاد', 'info'); } }
-        function navigateTo() { if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); return; } var targetLat = prompt('أدخل خط العرض للوجهة:'); var targetLng = prompt('أدخل خط الطول للوجهة:'); if (!targetLat || !targetLng) return; navigationTarget = { lat: parseFloat(targetLat), lng: parseFloat(targetLng) }; navigationActive = true; fetch(API_BASE + '/navigation/route', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() }, body: JSON.stringify({ start_lat: currentPosition.lat, start_lng: currentPosition.lng, end_lat: navigationTarget.lat, end_lng: navigationTarget.lng }) }).then(function(r) { return r.json(); }).then(function(d) { if (d.status === 'success') { showNotification('🧭', 'المسافة: ' + d.distance_km + ' كم | الوقت: ' + d.duration_minutes + ' دقيقة', 'info'); } }).catch(function() { showNotification('❌', 'فشل حساب المسار', 'error'); }); }
+        function navigateTo() { if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); return; } var targetLat = prompt('أدخل خط العرض للوجهة:'); var targetLng = prompt('أدخل خط الطول للوجهة:'); if (!targetLat || !targetLng) return; navigationTarget = { lat: parseFloat(targetLat), lng: parseFloat(targetLng) }; navigationActive = true; fetch(API_BASE + '/navigation/route', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() }, body: JSON.stringify({ start_lat: currentPosition.lat, start_lng: currentPosition.lng, end_lat: navigationTarget.lat, end_lng: navigationTarget.lng }) }).then(function(r) { return r.json(); }).then(function(d) { if (d.status === 'success' && d.routes) { allRoutes = d.routes; displayRoutesList(d.routes); document.getElementById('routeSelectionPanel').style.display = 'block'; } }).catch(function() { showNotification('❌', 'فشل حساب المسار', 'error'); }); }
         function updateNavigation(lat, lng) { if (!navigationTarget) return; var dist = haversineDistance(lat, lng, navigationTarget.lat, navigationTarget.lng); if (dist < 0.05) { navigationActive = false; navigationTarget = null; showNotification('✅', 'وصلت إلى وجهتك!', 'success'); } }
 
         function shareLocation() { if (isOnCooldown('share')) return; var token = getToken(); if (!token) { showNotification('⚠️', 'سجل دخول أولاً', 'warning'); showModal('loginModal'); return; } if (!currentPosition) { showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning'); startTracking(); return; } fetch(API_BASE + '/share/create', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ minutes: 30 }) }).then(function(r) { return r.json(); }).then(function(d) { if (d.status === 'success') { var url = d.full_url || (window.location.origin + '/share/' + d.room_id); if (navigator.clipboard) { navigator.clipboard.writeText(url).then(function() { showNotification('✅', 'تم نسخ رابط المشاركة', 'success'); }); } else { prompt('انسخ الرابط:', url); } } }); }
