@@ -135,6 +135,9 @@
         .route-card:hover { border-color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); }
         .route-card.selected { border-color: #00ff88; background: rgba(0, 255, 136, 0.1); }
 
+        .delivery-mode-banner { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9997; background: rgba(0,0,0,0.8); color: #ffcc00; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 700; pointer-events: none; text-align: center; display: none; }
+        .delivery-mode-banner.show { display: block; animation: pulse 2s infinite; }
+
         .loading-screen { position: fixed; inset: 0; background: radial-gradient(ellipse at center, #0a0a1a 0%, #000000 100%); display: flex; align-items: center; justify-content: center; z-index: 10000; transition: opacity 0.8s ease, visibility 0.8s ease; }
         .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .loader-spinner { width: 80px; height: 80px; border: 4px solid rgba(255, 255, 255, 0.1); border-top-color: var(--neon-cyan); border-right-color: var(--neon-purple); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -191,6 +194,9 @@
             <p style="color: rgba(255,255,255,0.4); margin-top: 10px; font-size: 13px;" id="loadingPercentage">0%</p>
         </div>
     </div>
+
+    <!-- بانر وضع اختيار موقع التسليم -->
+    <div class="delivery-mode-banner" id="deliveryModeBanner">📍 اضغط على الخريطة لتحديد موقع التسليم</div>
 
     <!-- حاويات الخريطة -->
     <div id="cesiumContainer"></div>
@@ -329,7 +335,7 @@
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="closeModal('menuModal'); showModal('loginModal')">🚪 تسجيل الدخول</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="closeModal('menuModal'); showModal('registerModal')">✨ إنشاء حساب</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="shareLocation()">🔗 مشاركة موقعي</button>
-                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="showDeliveryForm()">🚚 إرسال موقع تسليم</button>
+                <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="startDeliveryMode()">🚚 إرسال موقع تسليم</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="navigateTo()">🧭 تحديد مسار</button>
                 <button class="glass-btn" style="width: 100%; justify-content: flex-start;" onclick="logout()">👋 تسجيل الخروج</button>
             </div>
@@ -341,28 +347,33 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h2 style="font-size: 1.3rem; font-weight: 700;">🚚 إرسال موقع التسليم</h2>
-                <button class="modal-close-btn" onclick="closeModal('deliveryModal')">✕</button>
+                <button class="modal-close-btn" onclick="cancelDeliveryMode()">✕</button>
             </div>
-            <p style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 16px;">أدخل موقع التسليم واسمه لإنشاء رابط يفتحه السائق</p>
+            <p style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 16px;">
+                📌 <strong>اضغط على المكان في الخريطة</strong> لتحديد موقع التسليم
+            </p>
             
             <div style="margin-bottom: 12px;">
                 <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">📦 اسم المكان</label>
-                <input type="text" id="deliveryPlaceName" class="glass-input" placeholder="مثال: مستودع الرياض">
+                <input type="text" id="deliveryPlaceName" class="glass-input" placeholder="مثال: مستودع صنعاء">
             </div>
+            
             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                 <div style="flex: 1;">
                     <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">📍 خط العرض (Lat)</label>
-                    <input type="number" id="deliveryLat" class="glass-input" placeholder="24.7136" step="any" dir="ltr">
+                    <input type="text" id="deliveryLat" class="glass-input" placeholder="15.5" dir="ltr" readonly style="background: rgba(255,255,255,0.03);">
                 </div>
                 <div style="flex: 1;">
                     <label style="display: block; margin-bottom: 4px; font-size: 12px; color: rgba(255,255,255,0.6);">📍 خط الطول (Lng)</label>
-                    <input type="number" id="deliveryLng" class="glass-input" placeholder="46.6753" step="any" dir="ltr">
+                    <input type="text" id="deliveryLng" class="glass-input" placeholder="44.5" dir="ltr" readonly style="background: rgba(255,255,255,0.03);">
                 </div>
             </div>
-            <div style="margin-bottom: 8px;">
-                <button class="glass-btn" onclick="useCurrentLocationForDelivery()" style="width: 100%; font-size: 11px; justify-content: center;">📍 استخدام موقعي الحالي</button>
+            
+            <div id="deliveryCoordsStatus" style="font-size: 10px; color: #ffaa00; text-align: center; margin-bottom: 12px;">
+                ⏳ انتظر تحديد الموقع من الخريطة...
             </div>
-            <button class="neon-btn" onclick="createDeliveryLink()" style="width: 100%; padding: 12px; margin-bottom: 12px;">
+            
+            <button class="neon-btn" onclick="createDeliveryLinkFromMap()" style="width: 100%; padding: 12px; margin-bottom: 12px;">
                 🚚 إنشاء رابط التسليم
             </button>
             <div id="deliveryLinkResult" style="display: none; margin-top: 8px;">
@@ -372,6 +383,7 @@
                     <button class="neon-btn" onclick="copyDeliveryLink()" style="padding: 8px 12px; font-size: 11px; white-space: nowrap;">📋 نسخ</button>
                 </div>
             </div>
+            <button class="glass-btn" onclick="cancelDeliveryMode()" style="width: 100%; margin-top: 8px;">✕ إلغاء</button>
         </div>
     </div>
 
@@ -419,6 +431,11 @@
         var allRoutes = [];
         var driverTracking = false;
         var lastRemainingUpdate = 0;
+        var deliveryModeActive = false;
+        var deliveryPinEntity = null;
+        var selectedDeliveryLat = null;
+        var selectedDeliveryLng = null;
+        var deliveryClickHandler = null;
 
         // ====== Cooldown System ======
         var cooldowns = {};
@@ -472,7 +489,6 @@
                 }
             }, 200);
 
-            // ✅ الترتيب مهم جداً
             checkForShareLink();
             checkForDeliveryLink();
             initCesiumMap();
@@ -503,13 +519,14 @@
 
                 cesiumViewer._cesiumWidget._creditContainer.style.display = 'none';
 
+                // ✅ الموقع الافتراضي: اليمن (صنعاء)
                 cesiumViewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(46.6753, 24.7136, 5000),
+                    destination: Cesium.Cartesian3.fromDegrees(44.5, 15.5, 5000),
                     orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 }
                 });
 
                 userEntity = cesiumViewer.entities.add({
-                    id: 'user', position: Cesium.Cartesian3.fromDegrees(46.6753, 24.7136, 100),
+                    id: 'user', position: Cesium.Cartesian3.fromDegrees(44.5, 15.5, 100),
                     billboard: { image: createUserMarkerImage(), scale: 0.7, verticalOrigin: Cesium.VerticalOrigin.BOTTOM },
                     label: { text: '📍 أنت هنا', font: '14px Cairo', fillColor: Cesium.Color.CYAN, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 30) }
                 });
@@ -539,11 +556,12 @@
 
         function initLeafletMap() {
             var mapEl = document.getElementById('map');
-            leafletMap = L.map('map', { center: [24.7136, 46.6753], zoom: 15, zoomControl: false, attributionControl: false });
+            // ✅ الموقع الافتراضي: اليمن (صنعاء)
+            leafletMap = L.map('map', { center: [15.5, 44.5], zoom: 15, zoomControl: false, attributionControl: false });
             L.tileLayer(mapLayers[currentMapLayer].url, { maxZoom: 19 }).addTo(leafletMap);
             L.control.zoom({ position: 'bottomleft' }).addTo(leafletMap);
             var icon = L.divIcon({ html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#00ffff,#9333ea);border-radius:50%;border:3px solid white;box-shadow:0 0 30px rgba(0,255,255,0.8);animation:pulse 2s infinite;"></div>', iconSize: [36, 36], iconAnchor: [18, 18] });
-            userMarker = L.marker([24.7136, 46.6753], { icon: icon, zIndexOffset: 1000 }).addTo(leafletMap);
+            userMarker = L.marker([15.5, 44.5], { icon: icon, zIndexOffset: 1000 }).addTo(leafletMap);
             userPathLine = L.polyline([], { color: '#00ffff', weight: 4, opacity: 0.7, smoothFactor: 1 }).addTo(leafletMap);
             userMarker.bindPopup('<b>📍 أنت هنا</b><br><small>لم يبدأ التتبع بعد</small>');
             leafletMap.on('movestart', function(e) { if (e.originalEvent) autoFollowUser = false; });
@@ -793,34 +811,124 @@
             return canvas.toDataURL();
         }
 
-        // ==================== إرسال موقع التسليم ====================
-        function showDeliveryForm() {
+        // ==================== ✅ وضع اختيار موقع التسليم من الخريطة ====================
+        function startDeliveryMode() {
             closeModal('menuModal');
             showModal('deliveryModal');
             
-            if (currentPosition) {
-                document.getElementById('deliveryLat').value = currentPosition.lat;
-                document.getElementById('deliveryLng').value = currentPosition.lng;
+            deliveryModeActive = true;
+            selectedDeliveryLat = null;
+            selectedDeliveryLng = null;
+            
+            // إظهار البانر
+            document.getElementById('deliveryModeBanner').classList.add('show');
+            document.getElementById('deliveryCoordsStatus').textContent = '⏳ انتظر تحديد الموقع من الخريطة...';
+            document.getElementById('deliveryCoordsStatus').style.color = '#ffaa00';
+            
+            // إخفاء المودال للضغط على الخريطة
+            setTimeout(function() {
+                closeModal('deliveryModal');
+            }, 500);
+            
+            // ✅ مستمع للنقر على Cesium
+            if (cesiumViewer && use3D) {
+                deliveryClickHandler = function(click) {
+                    if (!deliveryModeActive) return;
+                    
+                    var cartesian = cesiumViewer.camera.pickEllipsoid(click.position, Cesium.Ellipsoid.WGS84);
+                    if (cartesian) {
+                        var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                        selectedDeliveryLng = Cesium.Math.toDegrees(cartographic.longitude);
+                        selectedDeliveryLat = Cesium.Math.toDegrees(cartographic.latitude);
+                        
+                        placeDeliveryPin(selectedDeliveryLat, selectedDeliveryLng);
+                    }
+                };
+                
+                cesiumViewer.screenSpaceEventHandler.setInputAction(deliveryClickHandler, Cesium.ScreenSpaceEventType.LEFT_CLICK);
             }
+            
+            // ✅ مستمع للنقر على Leaflet
+            if (leafletMap) {
+                leafletMap.on('click', function(e) {
+                    if (!deliveryModeActive) return;
+                    selectedDeliveryLat = e.latlng.lat;
+                    selectedDeliveryLng = e.latlng.lng;
+                    placeDeliveryPin(selectedDeliveryLat, selectedDeliveryLng);
+                });
+            }
+            
+            showNotification('📌', 'اضغط على أي مكان في الخريطة لتحديد موقع التسليم', 'info');
         }
 
-        function useCurrentLocationForDelivery() {
-            if (!currentPosition) {
-                showNotification('⚠️', 'ابدأ التتبع أولاً', 'warning');
-                return;
+        function placeDeliveryPin(lat, lng) {
+            // إزالة الدبوس القديم
+            if (deliveryPinEntity && cesiumViewer) {
+                cesiumViewer.entities.remove(deliveryPinEntity);
             }
-            document.getElementById('deliveryLat').value = currentPosition.lat;
-            document.getElementById('deliveryLng').value = currentPosition.lng;
-            showNotification('✅', 'تم استخدام موقعك الحالي', 'success');
+            
+            // إضافة دبوس جديد على Cesium
+            if (cesiumViewer && use3D) {
+                deliveryPinEntity = cesiumViewer.entities.add({
+                    id: 'deliveryPin',
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat, 50),
+                    billboard: {
+                        image: createDeliveryPinMarkerImage(),
+                        scale: 0.8,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+                    },
+                    label: {
+                        text: '📦 موقع التسليم',
+                        font: '14px Cairo',
+                        fillColor: Cesium.Color.YELLOW,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        verticalOrigin: Cesium.VerticalOrigin.TOP,
+                        pixelOffset: new Cesium.Cartesian2(0, 25)
+                    }
+                });
+                
+                // تحريك الكاميرا
+                cesiumViewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
+                    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-45), roll: 0 },
+                    duration: 1
+                });
+            }
+            
+            // تحديث الإحداثيات في المودال
+            document.getElementById('deliveryLat').value = lat.toFixed(6);
+            document.getElementById('deliveryLng').value = lng.toFixed(6);
+            document.getElementById('deliveryCoordsStatus').textContent = '✅ تم تحديد الموقع! الإحداثيات: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
+            document.getElementById('deliveryCoordsStatus').style.color = '#00ff88';
+            
+            // إظهار المودال مرة أخرى
+            setTimeout(function() {
+                if (deliveryModeActive) {
+                    showModal('deliveryModal');
+                }
+            }, 300);
+            
+            showNotification('✅', 'تم تحديد موقع التسليم! اضغط "إنشاء رابط التسليم"', 'success');
         }
 
-        function createDeliveryLink() {
-            var lat = document.getElementById('deliveryLat').value.trim();
-            var lng = document.getElementById('deliveryLng').value.trim();
+        function createDeliveryPinMarkerImage() {
+            var canvas = document.createElement('canvas'); canvas.width = 48; canvas.height = 48; var ctx = canvas.getContext('2d');
+            ctx.beginPath(); ctx.arc(24, 24, 22, 0, 2 * Math.PI); ctx.fillStyle = '#ff4444'; ctx.fill();
+            ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.stroke();
+            ctx.fillStyle = 'white'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('📍', 24, 24);
+            return canvas.toDataURL();
+        }
+
+        function createDeliveryLinkFromMap() {
+            var lat = selectedDeliveryLat || parseFloat(document.getElementById('deliveryLat').value);
+            var lng = selectedDeliveryLng || parseFloat(document.getElementById('deliveryLng').value);
             var name = document.getElementById('deliveryPlaceName').value.trim() || 'موقع التسليم';
             
-            if (!lat || !lng) {
-                showNotification('❌', 'أدخل الإحداثيات', 'error');
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                showNotification('❌', 'الرجاء الضغط على الخريطة لتحديد الموقع أولاً', 'error');
                 return;
             }
             
@@ -834,6 +942,27 @@
                     showNotification('✅', 'تم نسخ رابط التسليم! أرسله للسائق', 'success');
                 });
             }
+            
+            // إلغاء وضع التحديد
+            cancelDeliveryMode();
+        }
+
+        function cancelDeliveryMode() {
+            deliveryModeActive = false;
+            document.getElementById('deliveryModeBanner').classList.remove('show');
+            
+            // إزالة مستمع النقر
+            if (cesiumViewer && deliveryClickHandler) {
+                cesiumViewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+            }
+            
+            // إزالة الدبوس المؤقت
+            if (deliveryPinEntity && cesiumViewer) {
+                cesiumViewer.entities.remove(deliveryPinEntity);
+                deliveryPinEntity = null;
+            }
+            
+            closeModal('deliveryModal');
         }
 
         function copyDeliveryLink() {
