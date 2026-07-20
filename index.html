@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberShield Ultra - منصة الأمن السيبراني العربية الأولى | 17 أداة احترافية مدعومة بالذكاء الاصطناعي</title>
+    
+    <!-- SEO & Metadata -->
+    <meta name="description" content="منصة الأمن السيبراني العربية الأولى CyberShield Ultra تقدم 17 أداة احترافية مجانية: فحص الهاتف وكشف الاحتيال، فحص البريد الإلكتروني والمؤقت، تحليل قوة كلمة المرور، كشف روابط التصيد، تحليل IP و DNS، فحص النطاقات، تحليل Base64 و JWT، التحقق من البطاقات الائتمانية، فحص المنافذ، كشف الملفات الخطرة، تحليل مفاتيح API، وأكثر. إحصائيات حية، ذكاء اصطناعي داخلي، وخصوصية تامة.">
+    <meta name="keywords" content="أمن سيبراني, فحص الهاتف, كشف احتيال, فحص البريد الإلكتروني, بريد مؤقت, تحليل كلمة المرور, كشف الروابط, تصيد, فحص IP, تحليل DNS, فحص النطاقات, Base64, JWT, بطاقات ائتمان, فحص المنافذ, أمان الملفات, API Keys, أدوات أمنية مجانية, منصة عربية, CyberShield Ultra">
+    <link rel="canonical" href="https://cybersecuritypro.pythonanywhere.com/">
+
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="CyberShield Ultra - منصة الأمن السيبراني العربية الأولى">
+    <meta property="og:description" content="منصة الأمن السيبراني العربية الأولى تقدم 17 أداة احترافية مجانية مدعومة بالذكاء الاصطناعي">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cybersecuritypro.pythonanywhere.com/">
+    <meta property="og:site_name" content="CyberShield Ultra">
+    <meta property="og:image" content="https://cybersecuritypro.pythonanywhere.com/static/og-image.jpg">
+
+    <!-- Schema Markup -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "CyberShield Ultra",
+        "description": "منصة الأمن السيبراني العربية الأولى مع 17 أداة احترافية",
+        "url": "https://cybersecuritypro.pythonanywhere.com/",
+        "inLanguage": "ar",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://cybersecuritypro.pythonanywhere.com/search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+
+    <style>
+        /* ============================================================
+           CYBERSHIELD ULTRA - LEGENDARY ULTIMATE EDITION v7.0
+           (Keep all your original CSS untouched + New Scanner Styles)
+           ============================================================ */
+        :root {
+            --primary-900: #050510;
+            --primary-800: #0a0a1a;
+            --primary-700: #12122b;
+            --primary-600: #1a1a3a;
+            --accent-neon: #00f3ff;
+            --accent-purple: #b829e0;
+            --accent-pink: #ff2b8f;
+            --accent-orange: #ff6b2b;
+            --accent-gold: #FFD700;
+            --accent-silver: #C0C0C0;
+            --accent-rainbow: linear-gradient(135deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3);
+            --gradient-magic-1: linear-gradient(135deg, #00f3ff, #b829e0, #ff2b8f, #ff6b2b, #FFD700);
+            --gradient-magic-2: linear-gradient(45deg, #FFD700, #ff2b8f, #b829e0, #00f3ff);
+            --gradient-magic-3: linear-gradient(225deg, #667eea, #b829e0, #ff2b8f, #FFD700);
+            --gradient-rainbow: linear-gradient(90deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3);
+            --glow-magic: 0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(0, 243, 255, 0.3);
+            --glow-rainbow: 0 0 30px rgba(255, 0, 0, 0.5), 0 0 30px rgba(0, 255, 0, 0.3), 0 0 30px rgba(0, 0, 255, 0.3);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tajawal', 'Cairo', sans-serif;
+            background: var(--primary-900);
+            min-height: 100vh;
+            transition: background 0.3s ease;
+            overflow-x: hidden;
+            color: #fff;
+        }
+        /* Cosmic Background */
+        .cosmic-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;
+            background: radial-gradient(ellipse at 50% 50%, #0a0a2a, #020210);
+            overflow: hidden;
+        }
+        .stars {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(2px 2px at 10% 20%, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 30% 50%, #fff, rgba(0,0,0,0)), radial-gradient(3px 2px at 70% 80%, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 90% 30%, #fff, rgba(0,0,0,0));
+            background-size: 200px 200px, 150px 150px, 300px 300px, 250px 250px;
+            background-repeat: no-repeat; animation: starsMove 60s linear infinite; opacity: 0.6;
+        }
+        @keyframes starsMove { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+        .nebula {
+            position: absolute; top: 50%; left: 50%; width: 150%; height: 150%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(ellipse at 30% 40%, rgba(0, 243, 255, 0.15), transparent 50%),
+                        radial-gradient(ellipse at 70% 60%, rgba(255, 43, 143, 0.15), transparent 50%),
+                        radial-gradient(ellipse at 50% 50%, rgba(184, 41, 224, 0.1), transparent 70%);
+            animation: nebulaPulse 20s ease-in-out infinite;
+        }
+        @keyframes nebulaPulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; } }
+
+        /* Light Mode (Kept intact) */
+        body.light-mode { --primary-900: #f0f4ff; --primary-800: #e8edff; background: #f0f4ff; }
+        body.light-mode .cosmic-bg { background: radial-gradient(ellipse at 50% 50%, #e8edff, #dce4ff); }
+        body.light-mode .stat-card-legendary, body.light-mode .tool-card-legendary, body.light-mode .feature-item-legendary { background: rgba(255, 255, 255, 0.9); border-color: rgba(0, 0, 0, 0.1); }
+        body.light-mode .stat-label, body.light-mode .tool-desc, body.light-mode .feature-desc { color: rgba(0, 0, 0, 0.6); }
+        body.light-mode .tool-name, body.light-mode .feature-title { color: #1a1a3a; }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0a0a1a, #050510); z-index: 100000;
+            display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .welcome-screen.hide { opacity: 0; visibility: hidden; }
+        .welcome-logo { font-size: 6rem; animation: welcomePulse 1s ease infinite; filter: drop-shadow(0 0 30px #FFD700); }
+        @keyframes welcomePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+        .welcome-text { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #FFD700, #ff2b8f, #00f3ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .welcome-spinner { width: 60px; height: 60px; border: 3px solid rgba(255, 215, 0, 0.2); border-top-color: #FFD700; border-right-color: #ff2b8f; border-bottom-color: #00f3ff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed; top: 0; left: 0; width: 0%; height: 4px;
+            background: linear-gradient(90deg, #FFD700, #ff2b8f, #00f3ff, #FFD700); background-size: 200% 100%;
+            z-index: 10000; transition: width 0.1s ease; box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            animation: progressGlow 2s linear infinite;
+        }
+        @keyframes progressGlow { 0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }
+
+        /* Internet Status & Theme Toggle */
+        .internet-status {
+            position: fixed; top: 20px; right: 20px; padding: 6px 14px; background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px); border-radius: 50px; font-size: 0.7rem; z-index: 1000;
+            display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255, 215, 0, 0.3); font-weight: 600;
+        }
+        .internet-status.online { color: #22c55e; } .internet-status.offline { color: #ef4444; }
+        .theme-toggle {
+            position: fixed; bottom: 20px; left: 20px; width: 45px; height: 45px;
+            background: linear-gradient(135deg, #1a1a3a, #0a0a1a); border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            z-index: 1000; transition: all 0.3s ease; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        .theme-toggle:hover { transform: scale(1.1) rotate(15deg); border-color: #FFD700; box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
+        .theme-toggle i { font-size: 1.3rem; color: #FFD700; transition: transform 0.3s ease; }
+        .theme-toggle:hover i { transform: rotate(360deg); }
+        .toast-notification {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: linear-gradient(135deg, #1a1a3a, #0a0a1a); border: 1px solid rgba(255, 215, 0, 0.4);
+            border-radius: 60px; padding: 12px 24px; color: #fff; z-index: 10000;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); backdrop-filter: blur(15px);
+            display: flex; align-items: center; gap: 12px; font-size: 0.9rem; font-weight: 600;
+        }
+        .toast-notification.show { transform: translateX(-50%) translateY(0); }
+        .toast-icon { font-size: 1.2rem; animation: toastIconPop 0.3s ease; }
+        @keyframes toastIconPop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+        /* HERO SECTION & ORIGINAL CSS */
+        .hero-legendary { position: relative; min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; overflow: hidden; }
+        .hero-content { position: relative; z-index: 10; max-width: 800px; margin: 0 auto; }
+        .hero-badge { display: inline-block; padding: 6px 18px; background: rgba(10, 10, 26, 0.7); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 50px; color: #FFD700; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; backdrop-filter: blur(10px); animation: badgePulse 2s infinite; }
+        @keyframes badgePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 50% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } }
+        .hero-title { font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 900; line-height: 1.2; margin-bottom: 15px; background: linear-gradient(135deg, #FFD700, #ff2b8f, #00f3ff, #b829e0); background-size: 300% 300%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientMove 5s ease infinite; text-shadow: var(--glow-magic); }
+        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .hero-subtitle { font-size: 1rem; color: rgba(255, 255, 255, 0.85); max-width: 550px; margin: 0 auto 20px; line-height: 1.7; }
+        .hero-highlight { font-weight: 800; background: linear-gradient(135deg, #FFD700, #ff2b8f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.3rem; display: inline-block; }
+        .typed-text { display: inline-block; min-width: 130px; text-align: right; background: linear-gradient(135deg, #FFD700, #ff2b8f, #00f3ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; border-left: 2px solid #FFD700; padding-left: 8px; animation: blink 0.7s infinite; }
+        @keyframes blink { 0%, 100% { border-left-color: #FFD700; } 50% { border-left-color: transparent; } }
+        .hero-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn-legendary { padding: 10px 28px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; border: none; cursor: pointer; z-index: 1; display: inline-block; text-decoration: none; }
+        .btn-primary { background: linear-gradient(135deg, #FFD700, #ff2b8f); color: white; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255, 215, 0, 0.6); }
+        .btn-secondary { background: rgba(10, 10, 26, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 215, 0, 0.4); color: #fff; }
+        .btn-secondary:hover { background: rgba(255, 215, 0, 0.15); transform: translateY(-3px); border-color: #FFD700; }
+
+        /* Original Stats & Cards CSS */
+        .stats-legendary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 30px 20px; }
+        @media (max-width: 768px) { .stats-legendary { grid-template-columns: repeat(2, 1fr); } } @media (max-width: 480px) { .stats-legendary { grid-template-columns: 1fr; } }
+        .stat-card-legendary { background: rgba(10, 10, 26, 0.6); backdrop-filter: blur(15px); border: 1px solid rgba(255, 215, 0, 0.25); border-radius: 20px; padding: 18px 12px; text-align: center; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5); }
+        .stat-card-legendary::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%; background: linear-gradient(135deg, rgba(0, 243, 255, 0.1), rgba(255, 215, 0, 0.1)); transform: translateY(100%); transition: transform 0.4s ease; }
+        .stat-card-legendary:hover::before { transform: translateY(0); }
+        .stat-card-legendary:hover { transform: translateY(-5px); border-color: rgba(255, 215, 0, 0.5); box-shadow: 0 20px 40px -15px rgba(255, 215, 0, 0.4); }
+        .stat-icon { font-size: 1.8rem; margin-bottom: 8px; filter: drop-shadow(0 0 10px currentColor); animation: statFloat 3s ease-in-out infinite; }
+        @keyframes statFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .stat-value { font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #FFD700, #ff2b8f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; margin-bottom: 5px; }
+        .stat-label { color: rgba(255, 255, 255, 0.6); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 6px; }
+        .stat-trend { display: inline-block; padding: 3px 10px; background: rgba(10, 10, 26, 0.7); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 50px; color: #FFD700; font-size: 0.65rem; font-weight: 600; }
+
+        /* TOOLS & FEATURES */
+        .container { max-width: 1200px; margin: 0 auto; }
+        .tools-legendary { margin: 40px 20px; }
+        .section-header-legendary { text-align: center; margin-bottom: 30px; }
+        .section-title-legendary { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; background: linear-gradient(135deg, #FFD700, #ff2b8f, #00f3ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .section-subtitle-legendary { color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; max-width: 400px; margin: 0 auto; }
+        .tools-grid-legendary { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; }
+        .tool-card-legendary { background: rgba(10, 10, 26, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 20px; padding: 20px 15px; text-align: center; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; position: relative; overflow: hidden; text-decoration: none; display: block; }
+        .tool-card-legendary::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%; background: linear-gradient(135deg, rgba(0, 243, 255, 0.08), rgba(255, 215, 0, 0.08)); transform: translateY(100%); transition: transform 0.4s ease; z-index: 0; }
+        .tool-card-legendary:hover { transform: translateY(-5px); border-color: #FFD700; box-shadow: 0 20px 35px -12px rgba(255, 215, 0, 0.3); }
+        .tool-card-legendary:hover::before { transform: translateY(0); }
+        .tool-icon { font-size: 2.2rem; margin-bottom: 10px; position: relative; z-index: 1; filter: drop-shadow(0 0 10px currentColor); transition: all 0.3s ease; }
+        .tool-card-legendary:hover .tool-icon { transform: scale(1.1) rotate(5deg); filter: drop-shadow(0 0 20px #FFD700); }
+        .tool-name { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 5px; position: relative; z-index: 1; }
+        .tool-desc { color: rgba(255, 255, 255, 0.5); font-size: 0.75rem; line-height: 1.4; margin-bottom: 10px; position: relative; z-index: 1; }
+        .tool-badge { display: inline-block; padding: 3px 10px; background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(255, 215, 0, 0.15)); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 50px; color: #FFD700; font-size: 0.65rem; font-weight: 600; position: relative; z-index: 1; }
+        .ai-badge { display: inline-flex; align-items: center; gap: 3px; background: linear-gradient(135deg, rgba(0, 243, 255, 0.2), rgba(255, 215, 0, 0.2)); border: 1px solid rgba(255, 215, 0, 0.4); border-radius: 50px; padding: 2px 8px; font-size: 0.55rem; font-weight: 600; color: #FFD700; margin-left: 5px; content: 'AI'; }
+
+        /* NEW: Quick Scanner Box (Added with original aesthetics) */
+        .scanner-box-legendary {
+            max-width: 700px; margin: -20px auto 30px; position: relative; z-index: 20;
+            background: rgba(10, 10, 26, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 30px; padding: 30px; text-align: center;
+        }
+        .scanner-input-group { display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap; justify-content: center; }
+        #scannerInput { flex: 1; min-width: 200px; padding: 16px 20px; border-radius: 60px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 215, 0, 0.2); color: white; font-size: 1rem; outline: none; transition: 0.3s; }
+        #scannerInput:focus { border-color: #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
+        #scanBtnAction { padding: 16px 35px; border-radius: 60px; border: none; background: linear-gradient(135deg, #FFD700, #ff2b8f); color: white; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+        #scanBtnAction:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
+        #scannerResult { margin-top: 20px; display: none; text-align: left; background: rgba(0, 0, 0, 0.3); border-radius: 16px; padding: 15px; border: 1px solid rgba(255, 215, 0, 0.1); max-height: 250px; overflow-y: auto; }
+        #scannerResult pre { font-family: monospace; color: #a5f3fc; white-space: pre-wrap; word-wrap: break-word; margin: 0; }
+        .scanner-loader { display: none; margin: 10px auto; width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.1); border-top-color: #FFD700; animation: spin 1s linear infinite; }
+
+        .features-legendary { margin: 40px 20px; padding: 30px 0; background: linear-gradient(180deg, transparent, rgba(255, 215, 0, 0.05), transparent); border-radius: 50px; }
+        .features-grid-legendary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+        .feature-item-legendary { background: rgba(10, 10, 26, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 20px; padding: 18px; text-align: center; transition: all 0.4s ease; }
+        .feature-item-legendary:hover { border-color: #FFD700; transform: translateY(-5px); box-shadow: 0 15px 30px -12px rgba(255, 215, 0, 0.3); }
+        .feature-icon { font-size: 1.8rem; margin-bottom: 8px; filter: drop-shadow(0 0 10px #FFD700); }
+        .feature-title { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .feature-desc { color: rgba(255, 255, 255, 0.5); font-size: 0.75rem; line-height: 1.5; }
+        .scroll-reveal { opacity: 0; transform: translateY(30px); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .scroll-reveal.revealed { opacity: 1; transform: translateY(0); }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #0a0a1a; } ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #FFD700, #ff2b8f); border-radius: 10px; } ::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #ff2b8f, #00f3ff); }
+    </style>
+</head>
+<body>
+
+<div class="cosmic-bg"><div class="stars"></div><div class="nebula"></div></div>
+
+<div class="welcome-screen" id="welcomeScreen">
+    <div class="welcome-logo">🛡️</div>
+    <div class="welcome-text">CyberShield Ultra</div>
+    <div class="welcome-spinner"></div>
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="internet-status" id="internetStatus">
+    <i class="fas fa-wifi"></i> <span id="internetText">متصل</span>
+</div>
+<div class="theme-toggle" id="themeToggle">
+    <i class="fas fa-moon"></i>
+</div>
+
+<section class="hero-legendary">
+    <div class="hero-content">
+        <div class="hero-badge">🚀 منصة الأمن السيبراني العربية الأولى</div>
+        <h2 class="hero-title">CyberShield Ultra</h2>
+        <p class="hero-subtitle">
+            <span class="hero-highlight">١٧</span> أداة احترافية مدعومة بالذكاء الاصطناعي<br>
+            لحماية فضاءك الرقمي <span class="typed-text"></span>
+        </p>
+        <div class="hero-buttons">
+            <a href="#tools" class="btn-legendary btn-primary">🔍 استعرض الأدوات</a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/about" class="btn-legendary btn-secondary">📚 تعرف علينا</a>
+        </div>
+    </div>
+</section>
+
+<!-- ⭐ NEW: ULTRA SMART SCANNER (Works with all 17 tools via API) -->
+<div class="container">
+    <div class="scanner-box-legendary scroll-reveal">
+        <h3 style="margin-bottom: 5px; font-size: 1.2rem; background: linear-gradient(135deg, #FFD700, #ff2b8f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🧠 الفحص الذكي الفوري</h3>
+        <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem;">قم بلصق أي بيانات (رابط، هاتف، بريد، كلمة مرور، IP) وسيتعرف النظام عليها تلقائياً</p>
+        <div class="scanner-input-group">
+            <input type="text" id="scannerInput" placeholder="أدخل هنا ... مثال: https://example.com أو +967773749784">
+            <button id="scanBtnAction" onclick="runSmartScan()">🔍 افحص الآن</button>
+        </div>
+        <div class="scanner-loader" id="scannerLoader"></div>
+        <div id="scannerResult"><pre></pre></div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="stats-legendary">
+        <div class="stat-card-legendary scroll-reveal">
+            <div class="stat-icon">🛡️</div>
+            <div class="stat-value"><span class="counter-number" id="total-scans">٠</span></div>
+            <div class="stat-label">إجمالي الفحوصات</div>
+            <div class="stat-trend" id="scans-trend">📈 +٠ اليوم</div>
+        </div>
+        <div class="stat-card-legendary scroll-reveal">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value"><span class="counter-number" id="total-users">٠</span></div>
+            <div class="stat-label">المستخدمين</div>
+            <div class="stat-trend" id="users-trend">👤 ٠ نشط</div>
+        </div>
+        <div class="stat-card-legendary scroll-reveal">
+            <div class="stat-icon">🤖</div>
+            <div class="stat-value"><span class="counter-number" id="blocked-bots">٠</span></div>
+            <div class="stat-label">بوتات محظورة</div>
+            <div class="stat-trend" id="bots-trend">🚫 ٠ اليوم</div>
+        </div>
+        <div class="stat-card-legendary scroll-reveal">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-value"><span class="counter-number" id="avg-time">٠</span></div>
+            <div class="stat-label">متوسط الوقت</div>
+            <div class="stat-trend" id="time-trend">⚡ جاهز</div>
+        </div>
+    </div>
+
+    <section class="tools-legendary" id="tools">
+        <div class="section-header-legendary">
+            <h2 class="section-title-legendary">أدواتنا الاحترافية</h2>
+            <p class="section-subtitle-legendary">١٧ أداة متكاملة لفحص وتأمين جميع جوانب الأمن السيبراني</p>
+        </div>
+        <div class="tools-grid-legendary">
+            <!-- Static 17 Tools (Fixed Absolute URLs) -->
+            <a href="https://cybersecuritypro.pythonanywhere.com/phone-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">📱</div><h3 class="tool-name">فحص الهاتف <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل الأرقام وكشف الاحتيال</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/email-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">📧</div><h3 class="tool-name">فحص البريد <span class="ai-badge">AI</span></h3><p class="tool-desc">كشف البريد المؤقت والمزيف</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/password-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🔐</div><h3 class="tool-name">كلمة المرور <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل القوة ووقت الكسر</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/url-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🔗</div><h3 class="tool-name">الروابط <span class="ai-badge">AI</span></h3><p class="tool-desc">كشف روابط التصيد</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/domain-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🌐</div><h3 class="tool-name">النطاقات <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل DNS والمعلومات</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/ip-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">📍</div><h3 class="tool-name">IP <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل عناوين IP</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/username-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">👤</div><h3 class="tool-name">اسم المستخدم <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل الأنماط</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/hash-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🔑</div><h3 class="tool-name">Hash <span class="ai-badge">AI</span></h3><p class="tool-desc">التعرف على التجزئة</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/base64-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🔢</div><h3 class="tool-name">Base64 <span class="ai-badge">AI</span></h3><p class="tool-desc">فك تشفير</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/credit-card-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">💳</div><h3 class="tool-name">البطاقات <span class="ai-badge">AI</span></h3><p class="tool-desc">التحقق من Luhn</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/port-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🚪</div><h3 class="tool-name">المنافذ <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل المنافذ</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/file-upload-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">📁</div><h3 class="tool-name">الملفات <span class="ai-badge">AI</span></h3><p class="tool-desc">رفع وفحص الملفات</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/dns-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🌍</div><h3 class="tool-name">DNS <span class="ai-badge">AI</span></h3><p class="tool-desc">استعلام السجلات</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/api-key-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🔐</div><h3 class="tool-name">API Keys <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل المفاتيح</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/jwt-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🔑</div><h3 class="tool-name">JWT <span class="ai-badge">AI</span></h3><p class="tool-desc">فك تشفير التوكنز</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/user-agent-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">🌐</div><h3 class="tool-name">User Agent <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل المتصفح</p><span class="tool-badge">جرب الآن</span></a>
+            <a href="https://cybersecuritypro.pythonanywhere.com/filename-check" class="tool-card-legendary scroll-reveal"><div class="tool-icon">📄</div><h3 class="tool-name">أسماء الملفات <span class="ai-badge">AI</span></h3><p class="tool-desc">تحليل الأسماء</p><span class="tool-badge">جرب الآن</span></a>
+        </div>
+    </section>
+
+    <section class="features-legendary">
+        <div class="section-header-legendary">
+            <h2 class="section-title-legendary">لماذا نحن الأفضل؟</h2>
+            <p class="section-subtitle-legendary">مميزات تجعلنا المنصة العربية الأولى</p>
+        </div>
+        <div class="features-grid-legendary">
+            <div class="feature-item-legendary scroll-reveal"><div class="feature-icon">🚀</div><h3 class="feature-title">سرعة خارقة</h3><p class="feature-desc">نتائج فورية في أجزاء من الثانية</p></div>
+            <div class="feature-item-legendary scroll-reveal"><div class="feature-icon">🎯</div><h3 class="feature-title">دقة ٩٩٪</h3><p class="feature-desc">فحوصات دقيقة بأحدث التقنيات</p></div>
+            <div class="feature-item-legendary scroll-reveal"><div class="feature-icon">🔒</div><h3 class="feature-title">خصوصية كاملة</h3><p class="feature-desc">لا نخزن بياناتك أبداً</p></div>
+            <div class="feature-item-legendary scroll-reveal"><div class="feature-icon">🌍</div><h3 class="feature-title">عربي ١٠٠٪</h3><p class="feature-desc">دعم كامل للدول العربية</p></div>
+            <div class="feature-item-legendary scroll-reveal"><div class="feature-icon">🧠</div><h3 class="feature-title">ذكاء اصطناعي</h3><p class="feature-desc">تحليل متقدم للأنماط</p></div>
+            <div class="feature-item-legendary scroll-reveal"><div class="feature-icon">🆓</div><h3 class="feature-title">مجاني دائماً</h3><p class="feature-desc">جميع الأدوات مجانية</p></div>
+        </div>
+    </section>
+</div>
+
+<footer style="text-align: center; padding: 30px; color: rgba(255,255,255,0.4); font-size: 0.8rem; border-top: 1px solid rgba(255,215,0,0.1); margin-top: 40px;">
+    <p>© 2026 CyberShield Ultra - جميع الحقوق محفوظة</p>
+</footer>
+
+<!-- JAVASCRIPT -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+(function() {
+    "use strict";
+    function toArabicNumber(num) {
+        if (num === undefined || num === null) return '٠';
+        const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        return num.toString().replace(/\d/g, (d) => arabicDigits[d]);
+    }
+    
+    function animateCounter(element, target) {
+        if (!element) return;
+        let current = 0; const duration = 1000; const stepTime = 20; const steps = duration / stepTime; const increment = target / steps;
+        const interval = setInterval(() => {
+            current += increment;
+            if (current >= target) { element.textContent = toArabicNumber(Math.floor(target)); clearInterval(interval); element.style.transform = 'scale(1.05)'; setTimeout(() => { element.style.transform = ''; }, 200); }
+            else { element.textContent = toArabicNumber(Math.floor(current)); }
+        }, stepTime);
+    }
+
+    async function loadLiveStats() {
+        try {
+            // ✅ FIX: Absolute URL pointing to your PythonAnywhere API
+            const response = await fetch('https://cybersecuritypro.pythonanywhere.com/api/public/stats');
+            if (response.ok) {
+                const stats = await response.json();
+                animateCounter(document.getElementById('total-scans'), stats.total_scans || 0);
+                animateCounter(document.getElementById('total-users'), stats.active_users || 0);
+                animateCounter(document.getElementById('blocked-bots'), stats.blocked_bots || 0);
+                animateCounter(document.getElementById('avg-time'), Math.round(stats.avg_response_time_ms || 0));
+                const scansTrend = document.getElementById('scans-trend');
+                if (scansTrend) scansTrend.innerHTML = `📈 +${toArabicNumber(stats.today_scans || 0)} اليوم`;
+            }
+        } catch (error) { console.error('❌ فشل جلب الإحصائيات:', error); }
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div'); toast.className = 'toast-notification';
+        const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+        toast.innerHTML = `<div class="toast-icon">${icon}</div><div>${message}</div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+    // Typing Effect (Kept as is)
+    const words = ['فحص الهاتف', 'كشف البريد المزيف', 'تحليل كلمة المرور', 'كشف روابط التصيد', 'تحليل IP', 'فحص النطاقات'];
+    let wordIndex = 0, charIndex = 0, isDeleting = false;
+    function typeEffect() {
+        const currentWord = words[wordIndex];
+        let displayedText = '';
+        if (isDeleting) { displayedText = currentWord.substring(0, charIndex - 1); charIndex--; }
+        else { displayedText = currentWord.substring(0, charIndex + 1); charIndex++; }
+        const heroSubtitle = document.querySelector('.hero-subtitle');
+        if (heroSubtitle) {
+            let typedSpan = heroSubtitle.querySelector('.typed-text');
+            if (!typedSpan && heroSubtitle.innerHTML.includes('لحماية فضاءك الرقمي')) {
+                heroSubtitle.innerHTML = heroSubtitle.innerHTML + ' <span class="typed-text"></span>';
+                typedSpan = heroSubtitle.querySelector('.typed-text');
+            }
+            if (typedSpan) typedSpan.textContent = displayedText;
+        }
+        if (!isDeleting && charIndex === currentWord.length) { isDeleting = true; setTimeout(typeEffect, 2000); }
+        else if (isDeleting && charIndex === 0) { isDeleting = false; wordIndex = (wordIndex + 1) % words.length; setTimeout(typeEffect, 500); }
+        else { setTimeout(typeEffect, isDeleting ? 50 : 100); }
+    }
+    setTimeout(typeEffect, 1000);
+
+    // Progress Bar
+    const progressBar = document.getElementById('progressBar');
+    window.addEventListener('scroll', () => {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        if (height > 0) progressBar.style.width = (winScroll / height) * 100 + '%';
+    });
+
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    let isDarkMode = true;
+    themeToggle.addEventListener('click', () => {
+        isDarkMode = !isDarkMode;
+        if (isDarkMode) { document.body.classList.remove('light-mode'); themeToggle.innerHTML = '<i class="fas fa-moon"></i>'; showToast('🌙 تم التبديل إلى الوضع الليلي', 'info'); }
+        else { document.body.classList.add('light-mode'); themeToggle.innerHTML = '<i class="fas fa-sun"></i>'; showToast('☀️ تم التبديل إلى الوضع النهاري', 'info'); }
+    });
+
+    // Internet Status
+    const internetStatus = document.getElementById('internetStatus'); const internetText = document.getElementById('internetText');
+    function updateInternetStatus() {
+        if (navigator.onLine) { internetStatus.classList.add('online'); internetStatus.classList.remove('offline'); internetText.textContent = 'متصل'; }
+        else { internetStatus.classList.add('offline'); internetStatus.classList.remove('online'); internetText.textContent = 'غير متصل'; showToast('⚠️ انقطع الاتصال بالإنترنت!', 'error'); }
+    }
+    window.addEventListener('online', updateInternetStatus); window.addEventListener('offline', updateInternetStatus); updateInternetStatus();
+
+    // Scroll Reveal
+    const revealElements = document.querySelectorAll('.scroll-reveal');
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('revealed'); revealObserver.unobserve(entry.target); } });
+    }, { threshold: 0.1 });
+    revealElements.forEach(el => revealObserver.observe(el));
+
+    // Welcome Screen - FIXED: Reduced to 700ms for better UX
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    if (welcomeScreen) {
+        setTimeout(() => {
+            welcomeScreen.classList.add('hide');
+            setTimeout(() => welcomeScreen.style.display = 'none', 500);
+        }, 700); // ⏱️ Better speed
+    }
+
+    // Hover effects
+    document.querySelectorAll('.tool-card-legendary').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            const icon = card.querySelector('.tool-icon');
+            if (icon) { icon.style.transform = 'scale(1.15) rotate(8deg)'; setTimeout(() => { icon.style.transform = ''; }, 300); }
+        });
+    });
+
+    // ============================================================
+    // ⭐ NEW SMART SCANNER LOGIC (Replaces the need for separate pages)
+    // ============================================================
+    window.runSmartScan = async function() {
+        const input = document.getElementById('scannerInput').value.trim();
+        const output = document.getElementById('scannerResult').querySelector('pre');
+        const loader = document.getElementById('scannerLoader');
+        const resultBox = document.getElementById('scannerResult');
+
+        if (!input) { showToast('الرجاء إدخال البيانات للفحص!', 'error'); return; }
+
+        // Auto-detect tool type (Simplified heuristic)
+        let tool = 'url';
+        if (/^\+?[0-9]{7,15}$/.test(input)) tool = 'phone';
+        else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input)) tool = 'email';
+        else if (/^[a-fA-F0-9]{32,128}$/.test(input) || /^\$2[aby]\$/.test(input)) tool = 'hash';
+        else if (/^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/.test(input)) tool = 'ip';
+        else if (/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(input)) tool = 'domain';
+        // Fallback to url or api key detection if needed
+
+        // UI feedback
+        loader.style.display = 'block';
+        resultBox.style.display = 'none';
+        output.textContent = '';
+        showToast(`جاري التحليل باستخدام أداة: ${tool}...`, 'info');
+
+        try {
+            const payload = {};
+            payload[tool] = input;
+            // ✅ API Call to backend
+            const response = await fetch('https://cybersecuritypro.pythonanywhere.com/api/v1/scan/' + tool, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const json = await response.json();
+            loader.style.display = 'none';
+            resultBox.style.display = 'block';
+            output.textContent = JSON.stringify(json, null, 2);
+            showToast('✅ اكتمل الفحص بنجاح!', 'success');
+        } catch (err) {
+            loader.style.display = 'none';
+            resultBox.style.display = 'block';
+            output.textContent = '❌ خطأ في الاتصال بالسيرفر: ' + err.message;
+            showToast('❌ حدث خطأ أثناء الفحص!', 'error');
+        }
+    };
+
+    // Trigger scanner on Enter key
+    document.getElementById('scannerInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); window.runSmartScan(); }
+    });
+
+    // Init
+    loadLiveStats();
+    setInterval(loadLiveStats, 30000);
+    setTimeout(() => { showToast('🔥 مرحباً بك في CyberShield Ultra - منصة الأمن السيبراني العربية الأولى', 'success'); }, 2000);
+})();
+</script>
+</body>
+</html>
