@@ -56,7 +56,7 @@ async function runScan() {
 
     try {
         // إرسال الطلب إلى API الخلفية
-        const response = await fetch(`${API_BASE_URL}/api/v1/scan/${selectedTool}`, {
+        const response = await fetch(API_BASE_URL + '/api/public/stats');
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
